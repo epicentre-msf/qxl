@@ -1,0 +1,27 @@
+Package: qxl
+Title: Quick Customized Excel Files
+Version: 0.0.0.9000
+Authors@R: c(
+    person(
+      "Patrick", "Barks",
+      email = "patrick.barks@epicentre.msf.org",
+      role = c("aut", "cre")
+    )
+  )
+Description: A wrapper to the openxlsx package optimized for writing flat data
+    structures.
+License: MIT + file LICENSE
+Encoding: UTF-8
+LazyData: true
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 7.1.1
+Depends: 
+    R (>= 2.10)
+Imports:
+    openxlsx,
+    dplyr,
+    rlang
+Suggests: 
+    testthat (>= 3.0.0),
+    tibble,
+    readxl

@@ -1,0 +1,74 @@
+#' Conditional cell styles
+#'
+#' @description
+#' Wrappers to [`openxlsx::createStyle`] to create cell styles, with additional
+#' arguments `rows` and `cols` to specify the rows and/or columns that the style
+#' should apply to.
+#'
+#' @param rows Which rows the style should apply to. Can be set using
+#'   either:\cr\cr
+#'   __Integer rows indexes__: (e.g. `rows = c(2, 5, 6)`)\cr
+#'   Note that here indexes represent Excel rows rather than R rows (i.e. the
+#'   header is row 1).\cr\cr
+#
+#'   __An expression__: (e.g. `rows = cyl > 4`)\cr
+#'   If given an expression the style is applied using conditional formatting,
+#'   with the expression translated into an Excel-style formula. Note that
+#'   conditional formatting can update in real time if relevant data is changed
+#'   within the workbook.
+#'
+#' @param cols Tidy-selection specifying the columns that the style should apply
+#'   to. Defaults to [`dplyr::everything`] to select all columns.
+#'
+#' @rdname qstyle
+#' @inheritParams openxlsx::createStyle
+#'
+#' @importFrom openxlsx createStyle
+#' @importFrom dplyr everything
+#' @importFrom rlang enquo
+#' @export qstyle
+qstyle <- function(rows,
+                   cols = everything(),
+                   fontName = NULL,
+                   fontSize = NULL,
+                   fontColour = NULL,
+                   border = NULL,
+                   borderColour = getOption("openxlsx.borderColour", "black"),
+                   borderStyle = getOption("openxlsx.borderStyle", "thin"),
+                   bgFill = NULL,
+                   fgFill = NULL,
+                   halign = NULL,
+                   valign = NULL,
+                   textDecoration = NULL,
+                   wrapText = FALSE,
+                   textRotation = NULL,
+                   indent = NULL,
+                   locked = NULL,
+                   hidden = NULL) {
+
+  style <- openxlsx::createStyle(
+    fontName = fontName,
+    fontSize = fontSize,
+    fontColour = fontColour,
+    border = border,
+    borderColour = borderColour,
+    borderStyle = borderStyle,
+    bgFill = bgFill,
+    fgFill = fgFill,
+    halign = halign,
+    valign = valign,
+    textDecoration = textDecoration,
+    wrapText = wrapText,
+    textRotation = textRotation,
+    indent = indent,
+    locked = locked,
+    hidden = hidden
+  )
+
+  list(
+    rows = str2lang(deparse1(substitute(rows))),
+    cols = rlang::enquo(cols),
+    style = style
+  )
+}
+
