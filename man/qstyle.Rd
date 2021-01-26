@@ -29,13 +29,17 @@ qstyle(
 \item{rows}{Which rows the style should apply to. Can be set using
 either:\cr\cr
 \strong{Integer rows indexes}: (e.g. \code{rows = c(2, 5, 6)})\cr
-Note that here indexes represent Excel rows rather than R rows (i.e. the
-header is row 1).\cr\cr
+Note that in this case indexes represent Excel rows rather than R rows
+(i.e. the header is row 1).\cr\cr
 \strong{An expression}: (e.g. \code{rows = cyl > 4})\cr
-If given an expression the style is applied using conditional formatting,
-with the expression translated into an Excel-style formula. Note that
-conditional formatting can update in real time if relevant data is changed
-within the workbook.}
+Given an expression the style is applied using conditional formatting, with
+the expression translated into its Excel formula equivalent.\cr
+
+Expressions can optionally include a \code{.x} selector (e.g. \code{.x == 1}) to
+refer to multiple columns. See section \strong{Using a .x selector} below.\cr
+
+Note that conditional formatting can update in real time if relevant data
+is changed within the workbook.}
 
 \item{cols}{Tidy-selection specifying the columns that the style should apply
 to. Defaults to \code{\link[dplyr:reexports]{dplyr::everything}} to select all columns.}
@@ -129,3 +133,25 @@ Wrappers to \code{\link[openxlsx:createStyle]{openxlsx::createStyle}} to create 
 arguments \code{rows} and \code{cols} to specify the rows and/or columns that the style
 should apply to.
 }
+\section{Using a .x selector}{
+
+An expression passed to the \code{rows} argument can optionally incorporate a \code{.x}
+selector to refer to multiple columns within the worksheet.
+
+When a \code{.x} selector is used, each column specified in arguments \code{cols} is
+independently swapped into the \code{.x} position of the expression, which is then
+translated to the Excel formula equivalent and applied as conditional
+formatting to the worksheet.
+
+For example, given the following \code{qstyle} specification with respect to the
+\code{\link{mtcars}} dataset\preformatted{qstyle(
+  rows = .x == 1,
+  cols = c(vs, am, carb),
+  bgFill = "#FFC7CE"
+)
+}
+
+the style \code{bgFill = "#FFC7CE"} would be independently applied to any cell in
+columns \code{vs}, \code{am}, or \code{carb} with a value of \code{1}.
+}
+

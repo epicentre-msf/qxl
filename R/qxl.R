@@ -305,14 +305,18 @@ qxl <- function(x,
 #' @noRd
 #' @importFrom rlang `!!`
 #' @importFrom dplyr select
-col_selection <- function(data, cols, invert = FALSE) {
-  sel <- names(dplyr::select(data, !!cols))
+col_selection <- function(data, cols, index = TRUE, invert = FALSE) {
+
+  x <- names(dplyr::select(data, !!cols))
+
   if (invert) {
-    out <- which(!names(data) %in% sel)
-  } else {
-    out <- which(names(data) %in% sel)
+    x <- setdiff(names(data), x)
   }
-  out
+  if (index) {
+    x <- which(names(data) %in% x)
+  }
+
+  x
 }
 
 
@@ -324,7 +328,6 @@ list_to_df <- function(x) {
     stringsAsFactors = FALSE
   )
 }
-
 
 
 #' @noRd
@@ -369,7 +372,6 @@ translate_traverse <- function(x, cols, has_header) {
 
   x
 }
-
 
 
 #' @noRd
@@ -436,17 +438,44 @@ apply_row_style <- function(x,
     )
   } else {
     # conditional formatting
-    rule <- expr_to_excel(style$rows, names(x), has_header)
-    for (j in cols_style) {
-      openxlsx::conditionalFormatting(
-        wb,
-        sheet,
-        cols = j,
-        rows = data_start_row:nrow_x,
-        rule = rule,
-        style = style$style
-      )
+    has_dotx <- ".x" %in% all.vars(style$rows)
+
+    if (has_dotx) {
+      # conditional formatting with .x-selector
+      cols_dotx <- col_selection(x, style$cols, index = FALSE)
+
+      for (j in cols_dotx) {
+        rows_j <- do.call(
+          "substitute",
+          list(style$rows, list(.x = str2lang(j)))
+        )
+        rule_j <- expr_to_excel(
+          rows_j,
+          names(x),
+          has_header
+        )
+        openxlsx::conditionalFormatting(
+          wb,
+          sheet,
+          cols = which(names(x) %in% j),
+          rows = data_start_row:nrow_x,
+          rule = rule_j,
+          style = style$style
+        )
+      }
+    } else {
+      # conditional formatting, no .x-selector
+      rule <- expr_to_excel(style$rows, names(x), has_header)
+      for (j in cols_style) {
+        openxlsx::conditionalFormatting(
+          wb,
+          sheet,
+          cols = j,
+          rows = data_start_row:nrow_x,
+          rule = rule,
+          style = style$style
+        )
+      }
     }
   }
-
 }
