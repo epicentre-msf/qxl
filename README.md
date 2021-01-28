@@ -162,3 +162,25 @@ readxl::read_xlsx(file.path(path_write, "mtcars_header.xlsx"), skip = 1)
     ##  9 Merc 230           22.8     4  141.    95  3.92  3.15  22.9     1     0     4     2 NA    NA   
     ## 10 Merc 280           19.2     6  168.   123  3.92  3.44  18.3     1     0     4     4 NA    NA   
     ## # … with 22 more rows
+
+#### Writing a workbook with multiple sheets
+
+A call to `qxl` only writes one sheet at a time. To create a workbook
+with multiple sheets we need to pass an existing workbook to the `wb`
+argument, which can be done for example with piping.
+
+``` r
+library(dplyr, warn.conflict = FALSE)
+
+summary_cyl <- count(mtcars_tbl, cyl)
+summary_gear <- count(mtcars_tbl, gear)
+
+wb_mtcars <- qxl(mtcars_tbl, sheet = "mtcars") %>% 
+  qxl(summary_cyl, wb = ., sheet = "summary_cyl") %>% 
+  qxl(summary_gear, wb = ., sheet = "summary_gear")
+
+openxlsx::saveWorkbook(
+  wb_mtcars,
+  file = file.path(path_write, "mtcars_sheets.xlsx")
+)
+```

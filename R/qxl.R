@@ -12,6 +12,10 @@
 #' @param file Filename to write to. If `NULL` the resulting workbook is
 #'   returned as an openxlsx object of class "Workbook" rather than written to a
 #'   file.
+#' @param wb An openxlsx workbook object to write to. Defaults to a fresh
+#'   workbook created with [`openxlsx::createWorkbook`]. Only need to update
+#'   when constructing a workbook with multiple sheets, as a single call to
+#'   `qxl()` only adds one sheet at a time.
 #' @param sheet Name of sheet to write to. Defaults to "Sheet1".
 #' @param header Column header. Defaults to `names(x)` to create normal
 #'   single-row header of column names. Can alternatively pass a named character
@@ -81,6 +85,7 @@
 #' @export qxl
 qxl <- function(x,
                 file = NULL,
+                wb = openxlsx::createWorkbook(),
                 sheet = "Sheet1",
                 header = names(x),
                 style_head = qstyle(rows = 1, textDecoration = "bold"),
@@ -101,7 +106,7 @@ qxl <- function(x,
 
   ### initialize ---------------------------------------------------------------
   options("openxlsx.dateFormat" = date_format)
-  wb <- openxlsx::createWorkbook()
+  wb <- openxlsx::copyWorkbook(wb) # to avoid overwriting global env
   openxlsx::addWorksheet(wb, sheet, zoom = zoom)
 
   has_header <- !is.null(names(header))
@@ -158,10 +163,10 @@ qxl <- function(x,
 
   ### row height and col widths ------------------------------------------------
   if (!is.null(row_heights)) {
-    openxlsx::setRowHeights(wb, 1, rows = 1:nrow_x, heights = row_heights)
+    openxlsx::setRowHeights(wb, sheet, rows = 1:nrow_x, heights = row_heights)
   }
   if (!is.null(col_widths)) {
-    openxlsx::setColWidths(wb, 1, cols = 1:ncol_x, widths = col_widths)
+    openxlsx::setColWidths(wb, sheet, cols = 1:ncol_x, widths = col_widths)
   }
 
 

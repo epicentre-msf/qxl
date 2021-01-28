@@ -7,6 +7,7 @@
 qxl(
   x,
   file = NULL,
+  wb = openxlsx::createWorkbook(),
   sheet = "Sheet1",
   header = names(x),
   style_head = qstyle(rows = 1, textDecoration = "bold"),
@@ -32,6 +33,11 @@ qxl(
 \item{file}{Filename to write to. If \code{NULL} the resulting workbook is
 returned as an openxlsx object of class "Workbook" rather than written to a
 file.}
+
+\item{wb}{An openxlsx workbook object to write to. Defaults to a fresh
+workbook created with \code{\link[openxlsx:createWorkbook]{openxlsx::createWorkbook}}. Only need to update
+when constructing a workbook with multiple sheets, as a single call to
+\code{qxl()} only adds one sheet at a time.}
 
 \item{sheet}{Name of sheet to write to. Defaults to "Sheet1".}
 

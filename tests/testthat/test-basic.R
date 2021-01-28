@@ -12,6 +12,16 @@ test_that("basic functionality works as expected", {
   expect_true(file.exists(file_write))
   expect_equal(mtcars_tbl, readxl::read_xlsx(file_write))
 
+  # test return workbook
+  x <- qxl(mtcars_tbl)
+  expect_is(x, "Workbook")
+
+  # test multiple sheets
+  x <- qxl(mtcars_tbl, sheet = "Sheet1")
+  x <- qxl(mtcars_tbl[1:4,], wb = x, sheet = "BBB")
+  x <- qxl(mtcars_tbl[1:5,], wb = x, sheet = "CCC")
+  expect_equal(x$sheet_names, c("Sheet1", "BBB", "CCC"))
+
   # test argument header
   qxl(
     mtcars_tbl,
@@ -28,5 +38,6 @@ test_that("basic functionality works as expected", {
     names(readxl::read_xlsx(file_write, skip = 1)),
     names(mtcars_tbl)
   )
+
 })
 
