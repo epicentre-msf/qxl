@@ -81,7 +81,7 @@
 #'
 #' @import openxlsx
 #' @importFrom dplyr everything
-#' @importFrom rlang enquo
+#' @importFrom rlang enquo quo_get_expr
 #' @export qxl
 qxl <- function(x,
                 file = NULL,
@@ -109,9 +109,7 @@ qxl <- function(x,
   wb <- openxlsx::copyWorkbook(wb) # to avoid overwriting global env
   openxlsx::addWorksheet(wb, sheet, zoom = zoom)
 
-  has_header <- !is.null(names(header))
-
-  if (has_header) {
+  if (!is.null(names(header))) {
 
     data_start_row <- 3L
 
@@ -217,11 +215,10 @@ qxl <- function(x,
   ### row styles ---------------------------------------------------------------
   if (!is.null(style_head)) {
     apply_row_style(
-      x = x,
+      data = x,
       wb = wb,
       sheet = sheet,
       style = style_head,
-      has_header = has_header,
       data_start_row = data_start_row,
       nrow_x = nrow_x
     )
@@ -229,11 +226,10 @@ qxl <- function(x,
 
   if (!is.null(style1)) {
     apply_row_style(
-      x = x,
+      data = x,
       wb = wb,
       sheet = sheet,
       style = style1,
-      has_header = has_header,
       data_start_row = data_start_row,
       nrow_x = nrow_x
     )
@@ -241,11 +237,10 @@ qxl <- function(x,
 
   if (!is.null(style2)) {
     apply_row_style(
-      x = x,
+      data = x,
       wb = wb,
       sheet = sheet,
       style = style2,
-      has_header = has_header,
       data_start_row = data_start_row,
       nrow_x = nrow_x
     )
@@ -253,11 +248,10 @@ qxl <- function(x,
 
   if (!is.null(style3)) {
     apply_row_style(
-      x = x,
+      data = x,
       wb = wb,
       sheet = sheet,
       style = style3,
-      has_header = has_header,
       data_start_row = data_start_row,
       nrow_x = nrow_x
     )
@@ -305,25 +299,6 @@ qxl <- function(x,
 
 
 
-#' Convert tidy-selection of columns to integer indexes
-#'
-#' @noRd
-#' @importFrom rlang `!!`
-#' @importFrom dplyr select
-col_selection <- function(data, cols, index = TRUE, invert = FALSE) {
-
-  x <- names(dplyr::select(data, !!cols))
-
-  if (invert) {
-    x <- setdiff(names(data), x)
-  }
-  if (index) {
-    x <- which(names(data) %in% x)
-  }
-
-  x
-}
-
 
 #' @noRd
 list_to_df <- function(x) {
@@ -336,99 +311,15 @@ list_to_df <- function(x) {
 
 
 #' @noRd
-expr_to_excel <- function(x, cols, has_header) {
-
-  out_lang <- translate_traverse(x, cols, has_header)
-  out <- deparse1(out_lang)
-  out <- gsub("(?<![[:alpha:]])(?=[[:alpha:]]+[23]___TEMP_)", "$", out, perl = TRUE)
-  out <- gsub("___TEMP_", "", out)
-  out
-}
-
-
-#' Recursive function used to traverse expressions from top-down to break into
-#' binary components (3 terms or fewer) that can be passed to
-#' translate_options(), translate_missing(), and translate_equals()
-#'
-#' @noRd
-translate_traverse <- function(x, cols, has_header) {
-
-  if (is_expr_lowest(x)) {
-    x <- expr_to_excel_helper(x, cols, has_header)
-  } else {
-    for (i in seq_len(length(x))) {
-      if (is_expr_lowest(x[[i]])) {
-        x[[i]] <- expr_to_excel_helper(x[[i]], cols, has_header)
-      } else {
-        x[[i]] <- translate_traverse(x[[i]], cols = cols, has_header = has_header)
-      }
-    }
-  }
-
-  and_i <- which(as.character(x) %in% "&")
-  if (length(and_i) > 0) {
-    x[[and_i]] <- str2lang("AND")
-  }
-
-  or_i <- which(as.character(x) %in% "|")
-  if (length(or_i) > 0) {
-    x[[or_i]] <- str2lang("OR")
-  }
-
-  x
-}
-
-
-#' @noRd
-expr_to_excel_helper <- function(x, cols, has_header) {
-
-  suffix <- ifelse(has_header, "3___TEMP_", "2___TEMP_")
-  vars <- intersect(all.vars(x), cols)
-
-  if (length(vars) > 0) {
-    for (var_focal in vars) {
-      var_i <- which(as.character(x) %in% var_focal)
-      col_i <- which(cols %in% var_focal)
-      var_replace <- str2lang(paste0(COLS_EXCEL[col_i], suffix))
-      if (length(x) == 1) {
-        x <- var_replace
-      } else {
-        x[[var_i]] <- var_replace
-      }
-    }
-  }
-
-  as_date_i <- which(as.character(x) %in% "as.Date")
-  if (length(as_date_i) > 0) {
-    for (i in as_date_i) {
-      x[[i]] <- str2lang("DATEVALUE")
-    }
-  }
-
-  x
-}
-
-
-#' Test whether an expression is binary (has at most 3 atomic terms)
-#'
-#' @param x A call returned by str2lang()
-#'
-#' @noRd
-is_expr_lowest <- function(x) {
-  all(lengths(as.list(x)) <= 1L) & length(x) <= 3L
-}
-
-
-#' @noRd
-apply_row_style <- function(x,
+#' @importFrom rlang eval_tidy
+apply_row_style <- function(data,
                             wb,
                             sheet,
                             style,
-                            has_header,
                             data_start_row,
                             nrow_x) {
 
-  cols_style <- col_selection(x, style$cols)
+  cols_style <- col_selection(data, style$cols)
 
   if (is_numeric(style$rows)) {
     # row-specific formatting (non-conditional)
@@ -436,41 +327,48 @@ apply_row_style <- function(x,
       wb,
       sheet,
       style = style$style,
-      rows = eval(style$rows),
+      rows = rlang::eval_tidy(style$rows),
       cols = cols_style,
       gridExpand = TRUE,
       stack = TRUE
     )
   } else {
+
+    # extract expression
+    cond <- rlang::quo_get_expr(style$rows)
+
     # conditional formatting
-    has_dotx <- ".x" %in% all.vars(style$rows)
+    has_dotx <- ".x" %in% all.vars(cond)
 
     if (has_dotx) {
       # conditional formatting with .x-selector
-      cols_dotx <- col_selection(x, style$cols, index = FALSE)
-
+      cols_dotx <- col_selection(data, style$cols, index = FALSE)
       for (j in cols_dotx) {
-        rows_j <- do.call(
+        cond_j <- do.call(
           "substitute",
-          list(style$rows, list(.x = str2lang(j)))
+          list(cond, list(.x = str2lang(j)))
         )
-        rule_j <- expr_to_excel(
-          rows_j,
-          names(x),
-          has_header
+        cond_excel_j <- expr_to_excel(
+          rlang::enquo(cond_j),
+          data,
+          row_start = data_start_row
         )
         openxlsx::conditionalFormatting(
           wb,
           sheet,
-          cols = which(names(x) %in% j),
+          cols = which(names(data) %in% j),
           rows = data_start_row:nrow_x,
-          rule = rule_j,
+          rule = cond_excel_j,
           style = style$style
         )
       }
     } else {
       # conditional formatting, no .x-selector
-      rule <- expr_to_excel(style$rows, names(x), has_header)
+      rule <- expr_to_excel(
+        style$rows, # already enquo
+        data,
+        row_start = data_start_row
+      )
       for (j in cols_style) {
         openxlsx::conditionalFormatting(
           wb,

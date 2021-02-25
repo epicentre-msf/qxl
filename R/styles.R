@@ -91,7 +91,7 @@ qstyle <- function(rows,
   )
 
   list(
-    rows = str2lang(deparse1(substitute(rows))),
+    rows = rlang::enquo(rows),
     cols = rlang::enquo(cols),
     style = style
   )
