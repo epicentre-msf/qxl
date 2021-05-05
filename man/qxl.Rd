@@ -90,7 +90,10 @@ second column gives corresponding options, e.g.:\preformatted{data.frame(
   col = c("var_x", "var_x", "var_y", "var_y", "var_y"),
   val = c("Yes", "No", "Small", "Medium", "Large")
 )
-}}
+}
+
+Validation options are written/appended to a hidden worksheet named
+"valid_options".}
 
 \item{filter}{Logical indicating whether to add column filters.}
 

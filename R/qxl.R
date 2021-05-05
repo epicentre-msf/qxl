@@ -62,6 +62,8 @@
 #'     val = c("Yes", "No", "Small", "Medium", "Large")
 #'   )
 #'   ```
+#'   Validation options are written/appended to a hidden worksheet named
+#'   "valid_options".
 #' @param filter Logical indicating whether to add column filters.
 #' @param filter_cols Tidy-selection specifying which columns to filter. Only
 #'   used if `filter` is `TRUE`. Defaults to `everything()` to select all
@@ -82,6 +84,7 @@
 #' @import openxlsx
 #' @importFrom dplyr everything
 #' @importFrom rlang enquo quo_get_expr
+#'
 #' @export qxl
 qxl <- function(x,
                 file = NULL,
@@ -267,13 +270,25 @@ qxl <- function(x,
       validate_df <- list_to_df(validate)
     }
 
-    openxlsx::addWorksheet(wb, "options", visible = FALSE)
-    openxlsx::writeData(wb, "options", x = validate_df, colNames = FALSE)
+    if ("valid_options" %in% wb$sheet_names) {
+      opt <- openxlsx::readWorkbook(wb, "valid_options", colNames = FALSE)
+      valid_start <- nrow(opt) + 2L
+    } else {
+      valid_start <- 1L
+      openxlsx::addWorksheet(wb, "valid_options", visible = FALSE)
+    }
+
+    openxlsx::writeData(
+      wb, "valid_options",
+      x = validate_df,
+      startRow = valid_start,
+      colNames = FALSE
+    )
 
     for (j in unique(validate_df[[1]])) {
 
-      i_rng <- range(which(validate_df[[1]] %in% j))
-      excel_range <- paste0("'Options'!", "$B$", i_rng[1], ":", "$B$", i_rng[2])
+      i_rng <- range(which(validate_df[[1]] %in% j)) + valid_start - 1L
+      excel_range <- paste0("'valid_options'!", "$B$", i_rng[1], ":", "$B$", i_rng[2])
 
       openxlsx::dataValidation(
         wb,
