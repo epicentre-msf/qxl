@@ -19,7 +19,7 @@ quickly add customization like:
 -   custom column names with original variable-names hidden in the row
     below
 
-### Installation
+## Installation
 
 Install from GitHub with:
 
@@ -31,7 +31,7 @@ remotes::install_github("epicentre-msf/qxl")
 # remotes::install_github("epicentre-msf/qxl@main")
 ```
 
-### Usage
+## Usage
 
 ``` r
 library(qxl)
@@ -41,7 +41,7 @@ mtcars_tbl <- tibble::rownames_to_column(mtcars, "model")
 path_write <- tempdir()
 ```
 
-#### Default output
+### Default output
 
 ``` r
 qxl(
@@ -52,7 +52,7 @@ qxl(
 
 ![](man/figures/crop_mtcars_orig.png)
 
-#### Conditional formatting
+### Conditional formatting
 
 ``` r
 qxl(
@@ -68,7 +68,7 @@ qxl(
 
 ![](man/figures/crop_mtcars_cond.png)
 
-#### Data validation
+### Data validation
 
 ``` r
 mtcars_tbl$drive <- NA_character_
@@ -90,7 +90,7 @@ Instead of passing a list to argument `validate`, as above, could
 alternatively use a data frame with variable names in the first column
 and corresponding options in the second column.
 
-#### Cell protection
+### Cell protection
 
 ``` r
 qxl(
@@ -102,7 +102,7 @@ qxl(
 
 ![](man/figures/crop_mtcars_protect.png)
 
-#### Customized header
+### Customized header
 
 ``` r
 header_names <- c(
@@ -163,7 +163,7 @@ readxl::read_xlsx(file.path(path_write, "mtcars_header.xlsx"), skip = 1)
     ## 10 Merc 280           19.2     6  168.   123  3.92  3.44  18.3     1     0     4     4 NA    NA   
     ## # … with 22 more rows
 
-#### Writing a workbook with multiple sheets
+### Writing a workbook with multiple sheets
 
 To write a multi-sheet workbook where all sheets have the same (if any)
 styling, validation, and protection, we can simply pass a list of data
