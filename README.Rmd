@@ -168,7 +168,7 @@ wb_mtcars <- qxl(mtcars_tbl, sheet = "mtcars") %>%
   qxl(summary_cyl, wb = ., sheet = "summary_cyl") %>% 
   qxl(summary_gear, wb = ., sheet = "summary_gear")
 
-openxlsx::saveWorkbook(
+qwrite(
   wb_mtcars,
   file = file.path(path_write, "mtcars_sheets.xlsx")
 )

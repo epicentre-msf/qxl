@@ -291,7 +291,7 @@ qxl <- function(x,
 
   ### return -------------------------------------------------------------------
   if (!is.null(file)) {
-    openxlsx::saveWorkbook(wb, file = file, overwrite = overwrite)
+    qwrite(wb, file = file, overwrite = overwrite)
   } else {
     return(wb)
   }

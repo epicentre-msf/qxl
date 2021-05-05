@@ -13,10 +13,10 @@ A wrapper to the [openxlsx](https://github.com/ycphs/openxlsx) package
 optimized for writing flat data structures. Includes arguments to
 quickly add customization like:
 
-  - conditional formatting written as R expressions
-  - data validation rules based on a tidy dictionary structure
-  - column-specific worksheet protection
-  - custom column names with original variable-names hidden in the row
+-   conditional formatting written as R expressions
+-   data validation rules based on a tidy dictionary structure
+-   column-specific worksheet protection
+-   custom column names with original variable-names hidden in the row
     below
 
 ### Installation
@@ -179,7 +179,7 @@ wb_mtcars <- qxl(mtcars_tbl, sheet = "mtcars") %>%
   qxl(summary_cyl, wb = ., sheet = "summary_cyl") %>% 
   qxl(summary_gear, wb = ., sheet = "summary_gear")
 
-openxlsx::saveWorkbook(
+qwrite(
   wb_mtcars,
   file = file.path(path_write, "mtcars_sheets.xlsx")
 )
