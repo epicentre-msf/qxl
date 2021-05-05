@@ -39,5 +39,17 @@ test_that("basic functionality works as expected", {
     names(mtcars_tbl)
   )
 
+  # test writing list of data frames
+  mtcars_split <- split(mtcars_tbl, mtcars_tbl$cyl)
+  names(mtcars_split) <- paste0("cyl", names(mtcars_split))
+
+  x <- qxl(mtcars_split)
+  expect_equal(x$sheet_names, names(mtcars_split))
+
+  x <- qxl(mtcars_split, sheet = c("x1", "x2", "x3"))
+  expect_equal(x$sheet_names, c("x1", "x2", "x3"))
+
+  qxl(mtcars_split, file = file_write, overwrite = TRUE)
+  expect_equal(mtcars_split[["cyl8"]], readxl::read_xlsx(file_write, "cyl8"))
 })
 

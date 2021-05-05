@@ -8,8 +8,8 @@ qxl(
   x,
   file = NULL,
   wb = openxlsx::createWorkbook(),
-  sheet = "Sheet1",
-  header = names(x),
+  sheet = NULL,
+  header = NULL,
   style_head = qstyle(rows = 1, textDecoration = "bold"),
   style1 = NULL,
   style2 = NULL,
@@ -28,7 +28,7 @@ qxl(
 )
 }
 \arguments{
-\item{x}{A data frame}
+\item{x}{A data frame, or list of data frames}
 
 \item{file}{Filename to write to. If \code{NULL} the resulting workbook is
 returned as an openxlsx object of class "Workbook" rather than written to a
@@ -36,13 +36,15 @@ file.}
 
 \item{wb}{An openxlsx workbook object to write to. Defaults to a fresh
 workbook created with \code{\link[openxlsx:createWorkbook]{openxlsx::createWorkbook}}. Only need to update
-when constructing a workbook with multiple sheets, as a single call to
-\code{qxl()} only adds one sheet at a time.}
+when repeatedly calling \code{qxl()} to add worksheets to an existing workbook.}
 
-\item{sheet}{Name of sheet to write to. Defaults to "Sheet1".}
+\item{sheet}{Optional character vector of worksheet names. If \code{NULL} (the
+default) and \code{x} is a named list of data frames, worksheet names are taken
+from \code{names(x)}. Otherwise, names default to "Sheet1", "Sheet2", ...}
 
-\item{header}{Column header. Defaults to \code{names(x)} to create normal
-single-row header of column names. Can alternatively pass a named character
+\item{header}{Optional column header. Defaults to \code{NULL} in which case column
+names are taken directly from the data frame(s) in \code{x}, to create normal
+single-row headers. Can alternatively pass a named character
 vector to set custom names as the first row and variable names as a hidden
 second row.\preformatted{header = c(
   mpg = "Miles per US gallon",

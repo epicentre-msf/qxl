@@ -8,17 +8,19 @@
 #' - column-specific worksheet protection
 #' - custom column names with original variable-names hidden in the row below
 #'
-#' @param x A data frame
+#' @param x A data frame, or list of data frames
 #' @param file Filename to write to. If `NULL` the resulting workbook is
 #'   returned as an openxlsx object of class "Workbook" rather than written to a
 #'   file.
 #' @param wb An openxlsx workbook object to write to. Defaults to a fresh
 #'   workbook created with [`openxlsx::createWorkbook`]. Only need to update
-#'   when constructing a workbook with multiple sheets, as a single call to
-#'   `qxl()` only adds one sheet at a time.
-#' @param sheet Name of sheet to write to. Defaults to "Sheet1".
-#' @param header Column header. Defaults to `names(x)` to create normal
-#'   single-row header of column names. Can alternatively pass a named character
+#'   when repeatedly calling `qxl()` to add worksheets to an existing workbook.
+#' @param sheet Optional character vector of worksheet names. If `NULL` (the
+#'   default) and `x` is a named list of data frames, worksheet names are taken
+#'   from `names(x)`. Otherwise, names default to "Sheet1", "Sheet2", ...
+#' @param header Optional column header. Defaults to `NULL` in which case column
+#'   names are taken directly from the data frame(s) in `x`, to create normal
+#'   single-row headers. Can alternatively pass a named character
 #'   vector to set custom names as the first row and variable names as a hidden
 #'   second row.
 #'   ```
@@ -81,16 +83,12 @@
 #' library(datasets)
 #' qxl(mtcars, file = tempfile(fileext = ".xlsx"))
 #'
-#' @import openxlsx
-#' @importFrom dplyr everything
-#' @importFrom rlang enquo quo_get_expr
-#'
 #' @export qxl
 qxl <- function(x,
                 file = NULL,
                 wb = openxlsx::createWorkbook(),
-                sheet = "Sheet1",
-                header = names(x),
+                sheet = NULL,
+                header = NULL,
                 style_head = qstyle(rows = 1, textDecoration = "bold"),
                 style1 = NULL,
                 style2 = NULL,
@@ -106,6 +104,114 @@ qxl <- function(x,
                 zoom = 120L,
                 date_format = "yyyy-mm-dd",
                 overwrite = TRUE) {
+
+
+  # convert x to list if single data frame
+  if (is.data.frame(x)) { x <- list(x) }
+
+  # prepare sheet names
+  if (is.null(sheet)) {
+    if (is.null(names(x))) {
+      sheet <- paste0("Sheet", seq_along(x))
+    } else {
+      sheet <- names(x)
+    }
+  } else {
+    if (length(sheet) != length(x)) {
+      stop(
+        "If specified, argument `sheets` must be the same length as `x`",
+        call. = FALSE
+      )
+    }
+  }
+
+  # prepare header
+  if (is.null(header)) {
+    header <- lapply(x, names)
+  } else {
+    header <- replicate(length(x), header, simplify = FALSE)
+  }
+
+  # write first sheet
+  wb <- qxl_(
+    x = x[[1]],
+    wb = wb,
+    sheet = sheet[1],
+    header = header[[1]],
+    style_head = style_head,
+    style1 = style1,
+    style2 = style2,
+    style3 = style3,
+    row_heights = row_heights,
+    col_widths = col_widths,
+    freeze_row = freeze_row,
+    freeze_col = freeze_col,
+    protect = protect,
+    validate = validate,
+    filter = filter,
+    filter_cols = filter_cols,
+    zoom = zoom,
+    date_format = date_format
+  )
+
+  # write subsequent sheets (if any)
+  for (i in seq_along(x)[-1]) {
+    wb <- qxl_(
+      x = x[[i]],
+      wb = wb,
+      sheet = sheet[i],
+      header = header[[i]],
+      style_head = style_head,
+      style1 = style1,
+      style2 = style2,
+      style3 = style3,
+      row_heights = row_heights,
+      col_widths = col_widths,
+      freeze_row = freeze_row,
+      freeze_col = freeze_col,
+      protect = protect,
+      validate = validate,
+      filter = filter,
+      filter_cols = filter_cols,
+      zoom = zoom,
+      date_format = date_format
+    )
+  }
+
+  ### return -------------------------------------------------------------------
+  if (!is.null(file)) {
+    qxl::qwrite(wb, file = file, overwrite = overwrite)
+  } else {
+    return(wb)
+  }
+}
+
+
+
+#' @noRd
+#' @import openxlsx
+#' @importFrom dplyr everything
+#' @importFrom rlang enquo quo_get_expr
+qxl_ <- function(x,
+                 file = NULL,
+                 wb = openxlsx::createWorkbook(),
+                 sheet = "Sheet1",
+                 header = names(x),
+                 style_head = qstyle(rows = 1, textDecoration = "bold"),
+                 style1 = NULL,
+                 style2 = NULL,
+                 style3 = NULL,
+                 row_heights = NULL,
+                 col_widths = "auto",
+                 freeze_row = 1L,
+                 freeze_col = NULL,
+                 protect,
+                 validate = NULL,
+                 filter = FALSE,
+                 filter_cols = everything(),
+                 zoom = 120L,
+                 date_format = "yyyy-mm-dd",
+                 overwrite = TRUE) {
 
   ### initialize ---------------------------------------------------------------
   options("openxlsx.dateFormat" = date_format)

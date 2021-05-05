@@ -154,23 +154,42 @@ readxl::read_xlsx(file.path(path_write, "mtcars_header.xlsx"), skip = 1)
 
 #### Writing a workbook with multiple sheets
 
-A call to `qxl` only writes one sheet at a time. To create a workbook with
-multiple sheets we need to pass an existing workbook to the `wb` argument, which
-can be done for example with piping.
+To write a multi-sheet workbook where all sheets have the same (if any) styling,
+validation, and protection, we can simply pass a list of data frames to `qxl`.
+
+```{r}
+mtcars_split <- split(mtcars_tbl, mtcars_tbl$am)
+names(mtcars_split) <- c("automatic", "manual")
+
+qxl(
+  mtcars_split,
+  file = file.path(path_write, "mtcars_split.xlsx")
+)
+```
+
+If the different worksheets need to vary in their styling, validation, or
+protection, then we will need multiple calls to `qxl`, with the workbook
+argument `wb` carried forward at each step, which can be done for example with
+piping.
 
 ```{r}
 library(dplyr, warn.conflict = FALSE)
 
-summary_cyl <- count(mtcars_tbl, cyl)
-summary_gear <- count(mtcars_tbl, gear)
-
-wb_mtcars <- qxl(mtcars_tbl, sheet = "mtcars") %>% 
-  qxl(summary_cyl, wb = ., sheet = "summary_cyl") %>% 
-  qxl(summary_gear, wb = ., sheet = "summary_gear")
+wb_mtcars <- qxl(
+  mtcars_split$automatic,
+  sheet = "automatic"
+) %>% 
+  qxl(
+    mtcars_split$manual,
+    wb = .,
+    sheet = "manual",
+    # style only for sheet 'manual'
+    style1 = qstyle(hp > 200, bgFill = "#9ecae1")
+  )
 
 qwrite(
   wb_mtcars,
-  file = file.path(path_write, "mtcars_sheets.xlsx")
+  file = file.path(path_write, "mtcars_split_custom.xlsx")
 )
 ```
 
