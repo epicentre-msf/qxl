@@ -187,7 +187,7 @@ qxl <- function(x,
     protect_args <- c(
       wb = wb,
       sheet = sheet,
-      protect[!names(protect) %in% c("cols")]
+      protect[!names(protect) %in% c("cols", "row_buffer")]
     )
 
     do.call(openxlsx::protectWorksheet, protect_args)
@@ -197,7 +197,7 @@ qxl <- function(x,
       wb,
       sheet,
       style = unprotect(),
-      rows = seq_len(nrow_x),
+      rows = seq(data_start_row, nrow_x + protect$row_buffer, by = 1L),
       cols = col_selection(x, protect$cols, invert = TRUE),
       gridExpand = TRUE,
       stack = TRUE
@@ -296,8 +296,6 @@ qxl <- function(x,
     return(wb)
   }
 }
-
-
 
 
 #' @noRd
