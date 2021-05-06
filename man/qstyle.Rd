@@ -5,7 +5,7 @@
 \title{Conditional cell styles}
 \usage{
 qstyle(
-  rows,
+  rows = "data",
   cols = everything(),
   fontName = NULL,
   fontSize = NULL,
@@ -28,6 +28,11 @@ qstyle(
 \arguments{
 \item{rows}{Which rows the style should apply to. Can be set using
 either:\cr\cr
+\strong{Keyword}: (e.g. \code{rows = "data"} or \code{rows = "all"})\cr
+Keyword "data" (the default) applies a style to all data rows (excludes the
+header), whereas keyword "all" applies a style to all rows (header and
+data)\cr\cr
+
 \strong{Integer rows indexes}: (e.g. \code{rows = c(2, 5, 6)})\cr
 Note that in this case indexes represent Excel rows rather than R rows
 (i.e. the header is row 1).\cr\cr
@@ -129,7 +134,7 @@ Vertical alignment of cell contents
 \item{hidden}{Whether the formula of the cell contents will be hidden (if worksheet protection is turned on)}
 }
 \description{
-Wrappers to \code{\link[openxlsx:createStyle]{openxlsx::createStyle}} to create cell styles, with additional
+Wrapper to \code{\link[openxlsx:createStyle]{openxlsx::createStyle}} to create cell styles, with additional
 arguments \code{rows} and \code{cols} to specify the rows and/or columns that the style
 should apply to.
 }
@@ -155,3 +160,17 @@ the style \code{bgFill = "#FFC7CE"} would be independently applied to any cell i
 columns \code{vs}, \code{am}, or \code{carb} with a value of \code{1}.
 }
 
+\examples{
+# apply style halign = "center" to all data rows (by default rows = "data")
+qstyle(halign = "center")
+
+# apply style halign = "center" to all rows including header
+qstyle(rows = "all", halign = "center")
+
+# apply style halign = "center" to Excel rows 2:10
+qstyle(rows = 2:10, halign = "center")
+
+# apply conditional formatting to rows where cyl == 8 & mpg > 16
+qstyle(cyl == 8 & mpg > 16, fgFill = "fddbc7", textDecoration = "bold")
+
+}

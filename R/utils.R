@@ -12,8 +12,17 @@ COLS_EXCEL <- c(
 
 #' @noRd
 #' @importFrom rlang eval_tidy
-is_numeric <- function(x) {
+is_quo_numeric <- function(x) {
   out <- try(all(is.numeric(rlang::eval_tidy(x))), silent = TRUE)
+  if ("try-error" %in% class(out)) out <- FALSE
+  out
+}
+
+
+#' @noRd
+#' @importFrom rlang eval_tidy
+is_quo_character <- function(x) {
+  out <- try(all(is.character(rlang::eval_tidy(x))), silent = TRUE)
   if ("try-error" %in% class(out)) out <- FALSE
   out
 }

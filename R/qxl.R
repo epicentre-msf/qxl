@@ -440,7 +440,7 @@ apply_row_style <- function(data,
 
   cols_style <- col_selection(data, style$cols)
 
-  if (is_numeric(style$rows)) {
+  if (is_quo_numeric(style$rows)) {
     # row-specific formatting (non-conditional)
     openxlsx::addStyle(
       wb,
@@ -451,6 +451,25 @@ apply_row_style <- function(data,
       gridExpand = TRUE,
       stack = TRUE
     )
+  } else if (is_quo_character(style$rows)) {
+    # character keyword 'data' or 'all'
+    rows_chr <- rlang::eval_tidy(style$rows)
+    if (rows_chr == "data") {
+      rows_int <- seq(data_start_row, nrow_x, by = 1L)
+    } else if (rows_chr == "all") (
+      rows_int <- seq(1L, nrow_x, by = 1L)
+    )
+
+    openxlsx::addStyle(
+      wb,
+      sheet,
+      style = style$style,
+      rows = rows_int,
+      cols = cols_style,
+      gridExpand = TRUE,
+      stack = TRUE
+    )
+
   } else {
 
     # extract expression

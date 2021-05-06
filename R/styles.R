@@ -1,12 +1,17 @@
 #' Conditional cell styles
 #'
 #' @description
-#' Wrappers to [`openxlsx::createStyle`] to create cell styles, with additional
+#' Wrapper to [`openxlsx::createStyle`] to create cell styles, with additional
 #' arguments `rows` and `cols` to specify the rows and/or columns that the style
 #' should apply to.
 #'
 #' @param rows Which rows the style should apply to. Can be set using
 #'   either:\cr\cr
+#'   __Keyword__: (e.g. `rows = "data"` or `rows = "all"`)\cr
+#'   Keyword "data" (the default) applies a style to all data rows (excludes the
+#'   header), whereas keyword "all" applies a style to all rows (header and
+#'   data)\cr\cr
+#'
 #'   __Integer rows indexes__: (e.g. `rows = c(2, 5, 6)`)\cr
 #'   Note that in this case indexes represent Excel rows rather than R rows
 #'   (i.e. the header is row 1).\cr\cr
@@ -48,11 +53,24 @@
 #'
 #' @inheritParams openxlsx::createStyle
 #'
+#' @examples
+#' # apply style halign = "center" to all data rows (by default rows = "data")
+#' qstyle(halign = "center")
+#'
+#' # apply style halign = "center" to all rows including header
+#' qstyle(rows = "all", halign = "center")
+#'
+#' # apply style halign = "center" to Excel rows 2:10
+#' qstyle(rows = 2:10, halign = "center")
+#'
+#' # apply conditional formatting to rows where cyl == 8 & mpg > 16
+#' qstyle(cyl == 8 & mpg > 16, fgFill = "fddbc7", textDecoration = "bold")
+#'
 #' @importFrom openxlsx createStyle
 #' @importFrom dplyr everything
 #' @importFrom rlang enquo
 #' @export qstyle
-qstyle <- function(rows,
+qstyle <- function(rows = "data",
                    cols = everything(),
                    fontName = NULL,
                    fontSize = NULL,
@@ -90,9 +108,21 @@ qstyle <- function(rows,
     hidden = hidden
   )
 
+  # enquo
+  rows <- rlang::enquo(rows)
+  cols <- rlang::enquo(cols)
+
+  if (is_quo_character(rows) && !rlang::eval_tidy(rows) %in% c("data", "all")) {
+    stop(
+      "Invalid keyword. Arg `rows` should be one of 'data', 'all', a vector ",
+      "of integer indices, or an expression"
+    )
+  }
+
+  # return
   list(
-    rows = rlang::enquo(rows),
-    cols = rlang::enquo(cols),
+    rows = rows,
+    cols = cols,
     style = style
   )
 }
