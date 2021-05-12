@@ -1,5 +1,6 @@
 
-#' @noRd
+
+# Excel columns
 COLS_EXCEL <- c(
   LETTERS,
   apply(
@@ -8,6 +9,36 @@ COLS_EXCEL <- c(
     function(x) paste0(x[2], x[1])
   )
 )
+
+# R operators and Excel functions equivalents
+ROP2EXCEL <- c(
+  AND = "&",
+  OR = "|",
+  NOT = "!"
+)
+
+
+# R functions and Excel equivalents
+# https://rforexcelusers.com/excel-r-function-formula-list/
+RFN2EXCEL <- c(
+  AND = "&",
+  OR = "|",
+  NOT = "!",
+  ISBLANK = "is.na",
+  DATEVALUE = "as.Date",
+  ABS = "abs",
+  LOG = "log",
+  EXP = "exp",
+  SQRT = "sqrt"
+)
+
+
+#' @importFrom rlang is_quosure
+is_quo <- function(x) {
+  out <- try(rlang::is_quosure(x), silent = TRUE)
+  if ("try-error" %in% class(out)) out <- FALSE
+  out
+}
 
 
 #' @noRd

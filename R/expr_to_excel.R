@@ -19,9 +19,7 @@
 expr_to_excel <- function(x, data, row_start = 2L) {
 
   # if expression passed as quosure, convert to lang
-  is_quo <- try(rlang::is_quosure(x), silent = TRUE)
-  if ("try-error" %in% class(is_quo)) is_quo <- FALSE
-  if (is_quo) {
+  if (is_quo(x)) {
     x <- rlang::quo_get_expr(x)
   } else {
     x <- str2lang(deparse(substitute(x), width.cutoff = 500))
@@ -66,16 +64,6 @@ translate_traverse <- function(x, cols, row_start) {
     }
   }
 
-  and_i <- which(as.character(x) %in% "&")
-  if (length(and_i) > 0) {
-    x[[and_i]] <- str2lang("AND")
-  }
-
-  or_i <- which(as.character(x) %in% "|")
-  if (length(or_i) > 0) {
-    x[[or_i]] <- str2lang("OR")
-  }
-
   x
 }
 
@@ -83,26 +71,45 @@ translate_traverse <- function(x, cols, row_start) {
 #' @noRd
 expr_to_excel_helper <- function(x, cols, row_start) {
 
+  # convert R variable name to Excel-style column references, with temporary
+  # suffix to aid in later processing
   suffix <- paste0(row_start, "___TEMP_")
   vars <- intersect(all.vars(x), cols)
 
-  if (length(vars) > 0) {
-    for (var_focal in vars) {
-      var_i <- which(as.character(x) %in% var_focal)
-      col_i <- which(cols %in% var_focal)
-      var_replace <- str2lang(paste0(COLS_EXCEL[col_i], suffix))
-      if (length(x) == 1) {
-        x <- var_replace
-      } else {
-        x[[var_i]] <- var_replace
-      }
+  for (var_focal in vars) {
+    var_i <- which(as.character(x) %in% var_focal)
+    col_i <- which(cols %in% var_focal)
+    var_replace <- str2lang(paste0(COLS_EXCEL[col_i], suffix))
+    if (length(x) == 1) {
+      x <- var_replace
+    } else {
+      x[[var_i]] <- var_replace
     }
   }
 
-  as_date_i <- which(as.character(x) %in% "as.Date")
-  if (length(as_date_i) > 0) {
-    for (i in as_date_i) {
-      x[[i]] <- str2lang("DATEVALUE")
+  # convert R functions/operators to Excel equivalent
+  swap_fn(x)
+}
+
+
+#' Swap common R operators/functions with Excel equivalent
+#'
+#' @param x A call returned by str2lang()
+#'
+#' @noRd
+swap_fn <- function(x) {
+
+  x_chr <- as.character(x)
+
+  if (length(x_chr) == 1 && x_chr %in% ROP2EXCEL) {
+    # if single operator
+    m <- match(x_chr, ROP2EXCEL)
+    x <- str2lang(names(ROP2EXCEL)[m])
+  } else if (any(x_chr %in% RFN2EXCEL)) {
+    # else if contains translatable function
+    m <- match(x_chr, RFN2EXCEL)
+    for (i in which(!is.na(m))) {
+      x[[i]] <- str2lang(names(RFN2EXCEL)[m[i]])
     }
   }
 
