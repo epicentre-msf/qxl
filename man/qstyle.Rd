@@ -171,6 +171,6 @@ qstyle(rows = "all", halign = "center")
 qstyle(rows = 2:10, halign = "center")
 
 # apply conditional formatting to rows where cyl == 8 & mpg > 16
-qstyle(cyl == 8 & mpg > 16, fgFill = "fddbc7", textDecoration = "bold")
+qstyle(cyl == 8 & mpg > 16, fgFill = "#fddbc7", textDecoration = "bold")
 
 }
