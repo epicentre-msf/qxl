@@ -7,6 +7,9 @@
 
 [![Lifecycle:
 experimental](https://img.shields.io/badge/lifecycle-experimental-orange.svg)](https://www.tidyverse.org/lifecycle/#experimental)
+[![R-CMD-check](https://github.com/epicentre-msf/queryr/workflows/R-CMD-check/badge.svg)](https://github.com/epicentre-msf/qxl/actions)
+[![Codecov test
+coverage](https://codecov.io/gh/epicentre-msf/qxl/branch/main/graph/badge.svg)](https://codecov.io/gh/epicentre-msf/qxl?branch=main)
 <!-- badges: end -->
 
 A wrapper to the [openxlsx](https://github.com/ycphs/openxlsx) package
