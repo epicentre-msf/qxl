@@ -39,6 +39,51 @@ test_that("basic functionality works as expected", {
     names(mtcars_tbl)
   )
 
+  # test validation
+  df <- data.frame(
+    x1 = c("a", "a", "b", "c"),
+    x2 = NA_character_
+  )
+
+  qxl(
+    df,
+    file = file_write,
+    validate = list(x2 = c("Yes", "No", "Maybe"))
+  )
+
+  opts <- readxl::read_xlsx(
+    file_write,
+    sheet = "valid_options",
+    col_names = c("cols", "allowed")
+  )
+
+  expect_equal(opts$allowed, c("Yes", "No", "Maybe"))
+
+  # test conditional validation
+  df <- data.frame(
+    adm2 = c("AB", "SK", "SK", "AB"),
+    adm3 = NA_character_
+  )
+
+  dict <- data.frame(
+    adm2 = c("AB", "AB", "SK", "SK"),
+    adm3 = c("Calgary", "Edmonton", "Regina", "Saskatoon")
+  )
+
+  qxl(
+    df,
+    file = file_write,
+    validate_cond = dict
+  )
+
+  opts <- readxl::read_xlsx(
+    file_write,
+    sheet = "valid_options_cond",
+    col_names = names(dict)
+  )
+
+  expect_identical(as.data.frame(opts), as.data.frame(dict))
+
   # test writing list of data frames
   mtcars_split <- split(mtcars_tbl, mtcars_tbl$cyl)
   names(mtcars_split) <- paste0("cyl", names(mtcars_split))

@@ -20,6 +20,7 @@ qxl(
   freeze_col = NULL,
   protect,
   validate = NULL,
+  validate_cond = NULL,
   filter = FALSE,
   filter_cols = everything(),
   zoom = 120L,
@@ -96,6 +97,20 @@ second column gives corresponding options, e.g.:\preformatted{data.frame(
 
 Validation options are written/appended to a hidden worksheet named
 "valid_options".}
+
+\item{validate_cond}{Optional specification of conditional list-style
+validation, where the set of values to be allowed in a given column depends
+on the corresponding value within another column (e.g. the allowed values
+in column 'city' depend on the corresponding value in column 'province').
+Must be a data.frame with two columns, where the first column gives the
+conditional entries (e.g. 'province') and the second column gives with
+corresponding allowed entries (e.g. 'city') to be implemented as data
+validation. The column names of \code{validate_cond} should match the relevant
+columns within \code{x}.
+
+Note that in the current implementation validation is based on values in
+the conditional column of \code{x} at the time the workbook is written, and will
+not update in real time if those values are later changed.}
 
 \item{filter}{Logical indicating whether to add column filters.}
 

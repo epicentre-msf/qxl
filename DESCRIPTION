@@ -19,10 +19,11 @@ Depends:
     R (>= 2.10)
 Imports:
     openxlsx,
+    readxl,
     dplyr,
-    rlang
+    rlang,
+    lubridate
 Suggests: 
     testthat (>= 3.0.0),
     tibble,
-    readxl,
     covr

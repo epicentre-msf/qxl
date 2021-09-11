@@ -66,6 +66,19 @@
 #'   ```
 #'   Validation options are written/appended to a hidden worksheet named
 #'   "valid_options".
+#' @param validate_cond Optional specification of conditional list-style
+#'   validation, where the set of values to be allowed in a given column depends
+#'   on the corresponding value within another column (e.g. the allowed values
+#'   in column 'city' depend on the corresponding value in column 'province').
+#'   Must be a data.frame with two columns, where the first column gives the
+#'   conditional entries (e.g. 'province') and the second column gives with
+#'   corresponding allowed entries (e.g. 'city') to be implemented as data
+#'   validation. The column names of `validate_cond` should match the relevant
+#'   columns within `x`.
+#'
+#'   Note that in the current implementation validation is based on values in
+#'   the conditional column of `x` at the time the workbook is written, and will
+#'   not update in real time if those values are later changed.
 #' @param filter Logical indicating whether to add column filters.
 #' @param filter_cols Tidy-selection specifying which columns to filter. Only
 #'   used if `filter` is `TRUE`. Defaults to `everything()` to select all
@@ -99,6 +112,7 @@ qxl <- function(x,
                 freeze_col = NULL,
                 protect,
                 validate = NULL,
+                validate_cond = NULL,
                 filter = FALSE,
                 filter_cols = everything(),
                 zoom = 120L,
@@ -148,6 +162,7 @@ qxl <- function(x,
     freeze_col = freeze_col,
     protect = protect,
     validate = validate,
+    validate_cond = validate_cond,
     filter = filter,
     filter_cols = filter_cols,
     zoom = zoom,
@@ -171,6 +186,7 @@ qxl <- function(x,
       freeze_col = freeze_col,
       protect = protect,
       validate = validate,
+      validate_cond = validate_cond,
       filter = filter,
       filter_cols = filter_cols,
       zoom = zoom,
@@ -207,6 +223,7 @@ qxl_ <- function(x,
                  freeze_col = NULL,
                  protect,
                  validate = NULL,
+                 validate_cond = NULL,
                  filter = FALSE,
                  filter_cols = everything(),
                  zoom = 120L,
@@ -410,6 +427,65 @@ qxl_ <- function(x,
     }
   }
 
+
+  ### conditional validation ---------------------------------------------------
+  if (!is.null(validate_cond)) {
+
+    if (is.data.frame(validate_cond)) {
+      validate_cond_df <- validate_cond
+    } else {
+      validate_cond_df <- list_to_df(validate_cond)
+    }
+
+    if (ncol(validate_cond_df) != 2) {
+      stop("Argument `validate_cond` must be a data frame with 2 columns")
+    }
+
+    col_cond <- names(validate_cond_df)[1]
+    col_validation <- names(validate_cond_df)[2]
+
+    if (!col_cond %in% names(x)) {
+      stop("First column in argument `validate_cond` must be a column name in `x`")
+    }
+    if (!col_validation %in% names(x)) {
+      x[[col_validation]] <- NA_character_
+    }
+
+    if ("valid_options_cond" %in% wb$sheet_names) {
+      opt <- openxlsx::readWorkbook(wb, "valid_options_cond", colNames = FALSE)
+      valid_cond_start <- nrow(opt) + 2L
+    } else {
+      valid_cond_start <- 1L
+      openxlsx::addWorksheet(wb, "valid_options_cond", visible = FALSE)
+    }
+
+    openxlsx::writeData(
+      wb, "valid_options_cond",
+      x = validate_cond_df,
+      startRow = valid_cond_start,
+      colNames = FALSE
+    )
+
+    for (i in seq_len(nrow(x))) {
+
+      i_rng <- range(which(validate_cond_df[[col_cond]] %in% x[[col_cond]][i])) + valid_cond_start - 1
+
+      excel_range <- paste0("'valid_options_cond'!", "$B$", i_rng[1], ":", "$B$", i_rng[2])
+
+      openxlsx::dataValidation(
+        wb,
+        sheet,
+        col = which(names(x) %in% col_validation),
+        rows = data_start_row + i - 1,
+        type = "list",
+        value = excel_range,
+        allowBlank = TRUE,
+        showInputMsg = TRUE,
+        showErrorMsg = TRUE
+      )
+    }
+  }
+
   ### return -------------------------------------------------------------------
   if (!is.null(file)) {
     qwrite(wb, file = file, overwrite = overwrite)
@@ -520,3 +596,5 @@ apply_row_style <- function(data,
     }
   }
 }
+
+
