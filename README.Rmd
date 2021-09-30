@@ -153,6 +153,24 @@ variable names instead of the human-readable version.
 readxl::read_xlsx(file.path(path_write, "mtcars_header.xlsx"), skip = 1)
 ```
 
+### Alternating row groupings
+
+```{r}
+library(dplyr, warn.conflicts = FALSE)
+library(tidyr, warn.conflicts = FALSE)
+
+mtcars_long <- mtcars_tbl %>% 
+  dplyr::select(model, mpg, cyl, hp) %>% 
+  tidyr::pivot_longer(cols = -model, names_to = "variable")
+
+qxl(
+  mtcars_long,
+  file = file.path(path_write, "mtcars_groups.xlsx"),
+  group = "model"
+)
+```
+
+![](man/figures/crop_mtcars_groups.png)
 
 ### Writing a workbook with multiple sheets
 

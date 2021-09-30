@@ -14,6 +14,8 @@ qxl(
   style1 = NULL,
   style2 = NULL,
   style3 = NULL,
+  group,
+  group_style = qstyle(bgFill = "#ffcccb"),
   row_heights = NULL,
   col_widths = "auto",
   freeze_row = 1L,
@@ -62,6 +64,13 @@ second row.\preformatted{header = c(
 \item{style2}{Optional style to set using \code{\link[=qstyle]{qstyle()}}}
 
 \item{style3}{Optional style to set using \code{\link[=qstyle]{qstyle()}}}
+
+\item{group}{Optional vector of one or more column names used to create
+alternating groupings of rows, with every other row grouping styled as per
+argument \code{group_style}. See section \strong{Grouping rows}.}
+
+\item{group_style}{Optional style to apply to alternating groupings of rows,
+as specified using argument \code{groups}. Set using \code{\link[=qstyle]{qstyle()}}}
 
 \item{row_heights}{Numeric vector of row heights (in Excel units). The vector
 is recycled if shorter than the number of rows in \code{x}. Defaults to \code{NULL}
@@ -139,6 +148,23 @@ tidy data frames. Includes arguments to quickly add customization like:
 \item custom column names with original variable-names hidden in the row below
 }
 }
+\section{Grouping rows}{
+
+Given a dataset with multiple rows per group (e.g. repeated observations on a
+given individual), it can sometimes be useful to uniquely stylize alternating
+groups to allow for quick visual distinction of the rows belonging to any
+given group.
+
+Given one or more grouping columns specified using argument \code{groups}, the
+\code{qxl} function arranges the rows of the resulting worksheet by group and then
+applies the style \code{group_style} to the rows in every \emph{other} group, to create
+an alternating pattern. The alternating pattern is achieved by first creating
+a group index variable called \code{i} which is assigned a value of either \code{1} or
+\code{0}: \code{1} for the 1st group, \code{0} for the 2nd, \code{1} for the 3rd, \code{0} for the
+4th, etc. The style specified by \code{group_style} is then applied conditionally
+to rows where \code{i == 1}.
+}
+
 \examples{
 library(datasets)
 qxl(mtcars, file = tempfile(fileext = ".xlsx"))

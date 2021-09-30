@@ -21,6 +21,7 @@ Imports:
     openxlsx,
     readxl,
     dplyr,
+    tidyr,
     rlang,
     lubridate
 Suggests: 

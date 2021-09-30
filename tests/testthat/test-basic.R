@@ -84,6 +84,24 @@ test_that("basic functionality works as expected", {
 
   expect_identical(as.data.frame(opts), as.data.frame(dict))
 
+
+  # test group style
+  qxl(
+    mtcars_tbl,
+    file = file_write,
+    group = "model"
+  )
+
+  expect_equal(
+    names(readxl::read_xlsx(file_write)),
+    c("g", names(mtcars_tbl))
+  )
+
+  expect_setequal(
+    readxl::read_xlsx(file_write)$g,
+    c(0, 1)
+  )
+
   # test writing list of data frames
   mtcars_split <- split(mtcars_tbl, mtcars_tbl$cyl)
   names(mtcars_split) <- paste0("cyl", names(mtcars_split))

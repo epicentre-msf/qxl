@@ -35,6 +35,11 @@
 #' @param style1 Optional style to set using [`qstyle()`]
 #' @param style2 Optional style to set using [`qstyle()`]
 #' @param style3 Optional style to set using [`qstyle()`]
+#' @param group Optional vector of one or more column names used to create
+#'   alternating groupings of rows, with every other row grouping styled as per
+#'   argument `group_style`. See section __Grouping rows__.
+#' @param group_style Optional style to apply to alternating groupings of rows,
+#'   as specified using argument `groups`. Set using [`qstyle()`]
 #' @param row_heights Numeric vector of row heights (in Excel units). The vector
 #'   is recycled if shorter than the number of rows in `x`. Defaults to `NULL`
 #'   to use default row heights.
@@ -88,6 +93,21 @@
 #' @param overwrite Logical indicating whether to overwrite existing file.
 #'   Defaults to `TRUE`
 #'
+#' @section Grouping rows:
+#' Given a dataset with multiple rows per group (e.g. repeated observations on a
+#' given individual), it can sometimes be useful to uniquely stylize alternating
+#' groups to allow for quick visual distinction of the rows belonging to any
+#' given group.
+#'
+#' Given one or more grouping columns specified using argument `groups`, the
+#' `qxl` function arranges the rows of the resulting worksheet by group and then
+#' applies the style `group_style` to the rows in every *other* group, to create
+#' an alternating pattern. The alternating pattern is achieved by first creating
+#' a group index variable called `i` which is assigned a value of either `1` or
+#' `0`: `1` for the 1st group, `0` for the 2nd, `1` for the 3rd, `0` for the
+#' 4th, etc. The style specified by `group_style` is then applied conditionally
+#' to rows where `i == 1`.
+#'
 #' @return
 #' If argument `file` is not specified, returns an openxlsx workbook object.
 #' Otherwise writes workbook to file with no return.
@@ -106,6 +126,8 @@ qxl <- function(x,
                 style1 = NULL,
                 style2 = NULL,
                 style3 = NULL,
+                group,
+                group_style = qstyle(bgFill = "#ffcccb"),
                 row_heights = NULL,
                 col_widths = "auto",
                 freeze_row = 1L,
@@ -156,6 +178,8 @@ qxl <- function(x,
     style1 = style1,
     style2 = style2,
     style3 = style3,
+    group = group,
+    group_style = group_style,
     row_heights = row_heights,
     col_widths = col_widths,
     freeze_row = freeze_row,
@@ -180,6 +204,8 @@ qxl <- function(x,
       style1 = style1,
       style2 = style2,
       style3 = style3,
+      group = group,
+      group_style = group_style,
       row_heights = row_heights,
       col_widths = col_widths,
       freeze_row = freeze_row,
@@ -206,8 +232,9 @@ qxl <- function(x,
 
 #' @noRd
 #' @import openxlsx
-#' @importFrom dplyr everything
-#' @importFrom rlang enquo quo_get_expr
+#' @importFrom dplyr everything select mutate arrange relocate `%>%` all_of
+#' @importFrom tidyr unite
+#' @importFrom rlang enquo quo_get_expr .data
 qxl_ <- function(x,
                  file = NULL,
                  wb = openxlsx::createWorkbook(),
@@ -217,6 +244,8 @@ qxl_ <- function(x,
                  style1 = NULL,
                  style2 = NULL,
                  style3 = NULL,
+                 group,
+                 group_style = qstyle(bgFill = "#ffcccb"),
                  row_heights = NULL,
                  col_widths = "auto",
                  freeze_row = 1L,
@@ -229,6 +258,20 @@ qxl_ <- function(x,
                  zoom = 120L,
                  date_format = "yyyy-mm-dd",
                  overwrite = TRUE) {
+
+
+  ### grouping -----------------------------------------------------------------
+  has_group <- !missing(group)
+
+  if (has_group) {
+    x <- x %>%
+      tidyr::unite("g", dplyr::all_of(group), sep = " ", remove = FALSE) %>%
+      dplyr::relocate(.data$g, .before = 1) %>%
+      dplyr::arrange(.data$g) %>%
+      dplyr::mutate(g = as.integer(factor(.data$g)) %% 2L)
+
+    header <- if (!is.null(names(header))) c("g" = "Grouping", header) else c("g", header)
+  }
 
   ### initialize ---------------------------------------------------------------
   options("openxlsx.dateFormat" = date_format)
@@ -380,6 +423,27 @@ qxl_ <- function(x,
       style = style3,
       data_start_row = data_start_row,
       nrow_x = nrow_x
+    )
+  }
+
+  if (has_group) {
+
+    # apply_row_style(
+    #   data = x,
+    #   wb = wb,
+    #   sheet = sheet,
+    #   style = group_style,
+    #   data_start_row = data_start_row,
+    #   nrow_x = nrow_x
+    # )
+
+    openxlsx::conditionalFormatting(
+      wb = wb,
+      sheet = sheet,
+      cols = seq_len(ncol_x),
+      rows = data_start_row:nrow_x,
+      rule = paste0("$A", data_start_row, "==0"),
+      style = group_style$style
     )
   }
 

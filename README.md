@@ -151,7 +151,7 @@ version.
 readxl::read_xlsx(file.path(path_write, "mtcars_header.xlsx"), skip = 1)
 ```
 
-    ## # A tibble: 32 x 14
+    ## # A tibble: 32 × 14
     ##    model               mpg   cyl  disp    hp  drat    wt  qsec    vs    am  gear  carb drive color
     ##    <chr>             <dbl> <dbl> <dbl> <dbl> <dbl> <dbl> <dbl> <dbl> <dbl> <dbl> <dbl> <lgl> <lgl>
     ##  1 Mazda RX4          21       6  160    110  3.9   2.62  16.5     0     1     4     4 NA    NA   
@@ -165,6 +165,25 @@ readxl::read_xlsx(file.path(path_write, "mtcars_header.xlsx"), skip = 1)
     ##  9 Merc 230           22.8     4  141.    95  3.92  3.15  22.9     1     0     4     2 NA    NA   
     ## 10 Merc 280           19.2     6  168.   123  3.92  3.44  18.3     1     0     4     4 NA    NA   
     ## # … with 22 more rows
+
+### Alternating row groupings
+
+``` r
+library(dplyr, warn.conflicts = FALSE)
+library(tidyr, warn.conflicts = FALSE)
+
+mtcars_long <- mtcars_tbl %>% 
+  dplyr::select(model, mpg, cyl, hp) %>% 
+  tidyr::pivot_longer(cols = -model, names_to = "variable")
+
+qxl(
+  mtcars_long,
+  file = file.path(path_write, "mtcars_groups.xlsx"),
+  group = "model"
+)
+```
+
+![](man/figures/crop_mtcars_groups.png)
 
 ### Writing a workbook with multiple sheets
 
