@@ -39,6 +39,17 @@ test_that("basic functionality works as expected", {
     names(mtcars_tbl)
   )
 
+  # test argument col_widths
+  df <- data.frame(x1 = 1:3, x2 = 1:3, x3 = 1:3)
+
+  expect_silent(
+    qxl(df, col_widths = c(x1 = 4, .default = 6))
+  )
+
+  expect_error(
+    qxl(df, col_widths = c(x1 = 4, .default = 6, NONVALID = 6))
+  )
+
   # test validation
   df <- data.frame(
     x1 = c("a", "a", "b", "c"),
@@ -83,7 +94,6 @@ test_that("basic functionality works as expected", {
   )
 
   expect_identical(as.data.frame(opts), as.data.frame(dict))
-
 
   # test group style
   qxl(

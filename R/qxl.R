@@ -43,9 +43,22 @@
 #' @param row_heights Numeric vector of row heights (in Excel units). The vector
 #'   is recycled if shorter than the number of rows in `x`. Defaults to `NULL`
 #'   to use default row heights.
-#' @param col_widths Numeric vector of column widths (in Excel units), or string
-#'   "auto" to use automatic sizing. Defaults to "auto". The vector is recycled
-#'   if shorter than the number of columns in `x`.
+#' @param col_widths Vector of column widths (in Excel units). Can be numeric or
+#'   character, and may include keyword "auto" for automatic column sizing. The
+#'   vector is recycled if shorter than the number of columns in `x`. Defaults
+#'   to "auto".
+#'
+#'   Use named vector to give column widths for specific columns, where names
+#'   represent column names of `x` or the keyword ".default" to set a default
+#'   column width for all columns not otherwise specified. E.g.
+#'
+#'   ```
+#'   # specify widths for cols mpg and cyl, all others default to "auto"
+#'   col_widths <- c(mpg = 5, cyl = 10)
+#'
+#'   # specify widths for cols mpg and cyl, and explicit default for all others
+#'   col_widths <- c(mpg = 5, cyl = 10, .default = 7)
+#'   ```
 #' @param freeze_row Integer specifying a row to freeze at. Defaults to `1` to
 #'   add a freeze below the header row. Set to `0` or `NULL` to omit freezing.
 #' @param freeze_col Integer specifying a column to freeze at. Defaults to
@@ -332,10 +345,37 @@ qxl_ <- function(x,
   if (!is.null(row_heights)) {
     openxlsx::setRowHeights(wb, sheet, rows = 1:nrow_x, heights = row_heights)
   }
-  if (!is.null(col_widths)) {
-    openxlsx::setColWidths(wb, sheet, cols = 1:ncol_x, widths = col_widths)
-  }
 
+  if (!is.null(col_widths)) {
+    if (!is.null(names(col_widths))) {
+
+      names_extra <- setdiff(names(col_widths), c(names(x), ".default"))
+
+      if (length(names_extra) > 0) {
+        stop(
+          "Names within `col_names` do not match keyword \".default\" or colnames of `x`: ",
+          paste_collapse_c(names_extra),
+          call. = FALSE
+        )
+      }
+
+      col_widths_raw <- col_widths
+
+      width_default <- ifelse(
+        ".default" %in% names(col_widths),
+        col_widths[names(col_widths) == ".default"],
+        "auto"
+      )
+
+      col_widths <- rep(as.character(width_default), ncol_x)
+
+      for (j in seq_along(col_widths_raw)) {
+        col_widths[names(x) %in% names(col_widths_raw)[j]] <- as.character(col_widths_raw[j])
+      }
+    }
+
+    openxlsx::setColWidths(wb, sheet, cols = seq_len(ncol_x), widths = col_widths)
+  }
 
   ### freeze panes -------------------------------------------------------------
   if (is.null(freeze_row)) freeze_row <- 0L

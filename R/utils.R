@@ -90,3 +90,20 @@ col_selection <- function(data, cols, index = TRUE, invert = FALSE) {
   x
 }
 
+
+#' @noRd
+paste_collapse <- function(x, quote = TRUE, collapse = ", ") {
+  if (quote) {
+    out <- paste(dQuote(x, q = FALSE), collapse = collapse)
+  } else {
+    out <- paste(x, collapse = collapse)
+  }
+  return(out)
+}
+
+
+#' @noRd
+paste_collapse_c <- function(x, quote = TRUE, collapse = ", ") {
+  paste0("c(", paste_collapse(x, quote = quote, collapse = collapse), ")")
+}
+

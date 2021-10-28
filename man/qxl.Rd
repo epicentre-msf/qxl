@@ -76,9 +76,19 @@ as specified using argument \code{groups}. Set using \code{\link[=qstyle]{qstyle
 is recycled if shorter than the number of rows in \code{x}. Defaults to \code{NULL}
 to use default row heights.}
 
-\item{col_widths}{Numeric vector of column widths (in Excel units), or string
-"auto" to use automatic sizing. Defaults to "auto". The vector is recycled
-if shorter than the number of columns in \code{x}.}
+\item{col_widths}{Vector of column widths (in Excel units). Can be numeric or
+character, and may include keyword "auto" for automatic column sizing. The
+vector is recycled if shorter than the number of columns in \code{x}. Defaults
+to "auto".
+
+Use named vector to give column widths for specific columns, where names
+represent column names of \code{x} or the keyword ".default" to set a default
+column width for all columns not otherwise specified. E.g.\preformatted{# specify widths for cols mpg and cyl, all others default to "auto"
+col_widths <- c(mpg = 5, cyl = 10)
+
+# specify widths for cols mpg and cyl, and explicit default for all others
+col_widths <- c(mpg = 5, cyl = 10, .default = 7)
+}}
 
 \item{freeze_row}{Integer specifying a row to freeze at. Defaults to \code{1} to
 add a freeze below the header row. Set to \code{0} or \code{NULL} to omit freezing.}
