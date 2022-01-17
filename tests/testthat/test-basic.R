@@ -95,6 +95,33 @@ test_that("basic functionality works as expected", {
 
   expect_identical(as.data.frame(opts), as.data.frame(dict))
 
+  # test validate_cond_all
+  qxl(
+    df,
+    file = file_write,
+    validate_cond = dict,
+    validate_cond_all = c("<Missing>", "<Unknown>")
+  )
+
+  opts <- readxl::read_xlsx(
+    file_write,
+    sheet = "valid_options_cond",
+    col_names = names(dict)
+  )
+
+  dict_expect <- data.frame(
+    adm2 = c(
+      "AB", "AB", "AB", "AB",
+      "SK", "SK", "SK", "SK"
+    ),
+    adm3 = c(
+      "Calgary", "Edmonton", "<Missing>", "<Unknown>",
+      "Regina", "Saskatoon", "<Missing>", "<Unknown>"
+    )
+  )
+
+  expect_identical(as.data.frame(opts), as.data.frame(dict_expect))
+
   # test group style
   qxl(
     mtcars_tbl,

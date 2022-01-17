@@ -23,6 +23,7 @@ qxl(
   protect,
   validate = NULL,
   validate_cond = NULL,
+  validate_cond_all = NULL,
   filter = FALSE,
   filter_cols = everything(),
   zoom = 120L,
@@ -130,6 +131,9 @@ columns within \code{x}.
 Note that in the current implementation validation is based on values in
 the conditional column of \code{x} at the time the workbook is written, and will
 not update in real time if those values are later changed.}
+
+\item{validate_cond_all}{Optional vector of value(s) to always allow,
+independent of the value in the conditional column (e.g. "Unknown").}
 
 \item{filter}{Logical indicating whether to add column filters.}
 

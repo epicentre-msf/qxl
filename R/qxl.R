@@ -97,6 +97,8 @@
 #'   Note that in the current implementation validation is based on values in
 #'   the conditional column of `x` at the time the workbook is written, and will
 #'   not update in real time if those values are later changed.
+#' @param validate_cond_all Optional vector of value(s) to always allow,
+#'   independent of the value in the conditional column (e.g. "Unknown").
 #' @param filter Logical indicating whether to add column filters.
 #' @param filter_cols Tidy-selection specifying which columns to filter. Only
 #'   used if `filter` is `TRUE`. Defaults to `everything()` to select all
@@ -148,12 +150,12 @@ qxl <- function(x,
                 protect,
                 validate = NULL,
                 validate_cond = NULL,
+                validate_cond_all = NULL,
                 filter = FALSE,
                 filter_cols = everything(),
                 zoom = 120L,
                 date_format = "yyyy-mm-dd",
                 overwrite = TRUE) {
-
 
   # convert x to list if single data frame
   if (is.data.frame(x)) { x <- list(x) }
@@ -200,6 +202,7 @@ qxl <- function(x,
     protect = protect,
     validate = validate,
     validate_cond = validate_cond,
+    validate_cond_all = validate_cond_all,
     filter = filter,
     filter_cols = filter_cols,
     zoom = zoom,
@@ -226,6 +229,7 @@ qxl <- function(x,
       protect = protect,
       validate = validate,
       validate_cond = validate_cond,
+      validate_cond_all = validate_cond_all,
       filter = filter,
       filter_cols = filter_cols,
       zoom = zoom,
@@ -245,7 +249,9 @@ qxl <- function(x,
 
 #' @noRd
 #' @import openxlsx
+#' @importFrom stats setNames
 #' @importFrom dplyr everything select mutate arrange relocate `%>%` all_of
+#'   bind_rows
 #' @importFrom tidyr unite
 #' @importFrom rlang enquo quo_get_expr .data
 qxl_ <- function(x,
@@ -266,6 +272,7 @@ qxl_ <- function(x,
                  protect,
                  validate = NULL,
                  validate_cond = NULL,
+                 validate_cond_all = NULL,
                  filter = FALSE,
                  filter_cols = everything(),
                  zoom = 120L,
@@ -547,6 +554,22 @@ qxl_ <- function(x,
 
     col_cond <- names(validate_cond_df)[1]
     col_validation <- names(validate_cond_df)[2]
+
+    if (!is.null(validate_cond_all)) {
+
+      validate_cond_all_df <- expand.grid(
+        x = unique(validate_cond_df[[col_cond]]),
+        y = validate_cond_all
+      )
+
+      validate_cond_all_df <- stats::setNames(
+        validate_cond_all_df,
+        c(col_cond, col_validation)
+      )
+
+      validate_cond_df <- dplyr::bind_rows(validate_cond_df, validate_cond_all_df)
+      validate_cond_df <- validate_cond_df[order(validate_cond_df[[1]]), , drop = FALSE]
+    }
 
     if (!col_cond %in% names(x)) {
       stop("First column in argument `validate_cond` must be a column name in `x`")
