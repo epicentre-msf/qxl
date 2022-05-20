@@ -30,4 +30,7 @@ test_that("qstyle works as expected", {
     c("A2:A9", "B2:B9", "C2:C9")
   )
 
+  # test style applied to data.frame with 0 rows (issue #1)
+  expect_silent(qxl(dat[0,], style1 = qstyle(bgFill = "#fddbc7")))
+
 })

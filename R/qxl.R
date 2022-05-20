@@ -344,7 +344,7 @@ qxl_ <- function(x,
     colNames = FALSE
   )
 
-  nrow_x <- nrow(x) + data_start_row - 1L
+  nrow_x <- nrow(x) + data_start_row - 1L # number of rows in Excel, incl. header
   ncol_x <- ncol(x)
 
 
@@ -658,7 +658,11 @@ apply_row_style <- function(data,
     # character keyword 'data' or 'all'
     rows_chr <- rlang::eval_tidy(style$rows)
     if (rows_chr == "data") {
-      rows_int <- seq(data_start_row, nrow_x, by = 1L)
+      if (nrow_x >= data_start_row) {
+        rows_int <- seq(data_start_row, nrow_x, by = 1L)
+      } else {
+        rows_int <- NULL
+      }
     } else if (rows_chr == "all") (
       rows_int <- seq(1L, nrow_x, by = 1L)
     )
