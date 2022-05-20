@@ -14,6 +14,8 @@ qxl(
   style1 = NULL,
   style2 = NULL,
   style3 = NULL,
+  style4 = NULL,
+  style5 = NULL,
   group,
   group_style = qstyle(bgFill = "#ffcccb"),
   row_heights = NULL,
@@ -60,11 +62,7 @@ second row.\preformatted{header = c(
 \item{style_head}{Style for the header row. Set with \code{\link[=qstyle]{qstyle()}}, or set to
 \code{NULL} for no header styling. Defaults to bold text.}
 
-\item{style1}{Optional style to set using \code{\link[=qstyle]{qstyle()}}}
-
-\item{style2}{Optional style to set using \code{\link[=qstyle]{qstyle()}}}
-
-\item{style3}{Optional style to set using \code{\link[=qstyle]{qstyle()}}}
+\item{style1, style2, style3, style4, style5}{Optional style to set using \code{\link[=qstyle]{qstyle()}}}
 
 \item{group}{Optional vector of one or more column names used to create
 alternating groupings of rows, with every other row grouping styled as per

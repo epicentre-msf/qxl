@@ -50,6 +50,33 @@ test_that("basic functionality works as expected", {
     qxl(df, col_widths = c(x1 = 4, .default = 6, NONVALID = 6))
   )
 
+  # test multiple styles
+  wb <- qxl(
+    mtcars_tbl,
+    style1 = qstyle(
+      mpg > 20,
+      cols = mpg,
+      bgFill = "#fddbc7"
+    ),
+    style2 = qstyle(
+      disp > 300,
+      cols = disp,
+      bgFill = "#fddbc7"
+    ),
+    style3 = qstyle(
+      drat > 3.2,
+      cols = drat,
+      bgFill = "#fddbc7"
+    ),
+    style4 = qstyle(
+      wt > 3,
+      cols = wt,
+      bgFill = "#fddbc7"
+    )
+  )
+
+  expect_length(wb$worksheets[[1]]$conditionalFormatting, 4L)
+
   # test validation
   df <- data.frame(
     x1 = c("a", "a", "b", "c"),

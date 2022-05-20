@@ -32,9 +32,7 @@
 #'   ```
 #' @param style_head Style for the header row. Set with [`qstyle()`], or set to
 #'   `NULL` for no header styling. Defaults to bold text.
-#' @param style1 Optional style to set using [`qstyle()`]
-#' @param style2 Optional style to set using [`qstyle()`]
-#' @param style3 Optional style to set using [`qstyle()`]
+#' @param style1,style2,style3,style4,style5 Optional style to set using [`qstyle()`]
 #' @param group Optional vector of one or more column names used to create
 #'   alternating groupings of rows, with every other row grouping styled as per
 #'   argument `group_style`. See section __Grouping rows__.
@@ -141,6 +139,8 @@ qxl <- function(x,
                 style1 = NULL,
                 style2 = NULL,
                 style3 = NULL,
+                style4 = NULL,
+                style5 = NULL,
                 group,
                 group_style = qstyle(bgFill = "#ffcccb"),
                 row_heights = NULL,
@@ -193,6 +193,8 @@ qxl <- function(x,
     style1 = style1,
     style2 = style2,
     style3 = style3,
+    style4 = style4,
+    style5 = style5,
     group = group,
     group_style = group_style,
     row_heights = row_heights,
@@ -220,6 +222,8 @@ qxl <- function(x,
       style1 = style1,
       style2 = style2,
       style3 = style3,
+      style4 = style4,
+      style5 = style5,
       group = group,
       group_style = group_style,
       row_heights = row_heights,
@@ -263,6 +267,8 @@ qxl_ <- function(x,
                  style1 = NULL,
                  style2 = NULL,
                  style3 = NULL,
+                 style4 = NULL,
+                 style5 = NULL,
                  group,
                  group_style = qstyle(bgFill = "#ffcccb"),
                  row_heights = NULL,
@@ -468,6 +474,28 @@ qxl_ <- function(x,
       wb = wb,
       sheet = sheet,
       style = style3,
+      data_start_row = data_start_row,
+      nrow_x = nrow_x
+    )
+  }
+
+  if (!is.null(style4)) {
+    apply_row_style(
+      data = x,
+      wb = wb,
+      sheet = sheet,
+      style = style4,
+      data_start_row = data_start_row,
+      nrow_x = nrow_x
+    )
+  }
+
+  if (!is.null(style5)) {
+    apply_row_style(
+      data = x,
+      wb = wb,
+      sheet = sheet,
+      style = style5,
       data_start_row = data_start_row,
       nrow_x = nrow_x
     )
