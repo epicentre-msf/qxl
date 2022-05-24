@@ -163,9 +163,7 @@ qxl <- function(x,
   # prepare sheet names
   if (is.null(sheet)) {
     if (is.null(names(x))) {
-      sheet <- paste0("Sheet", seq_along(x))
-    } else {
-      sheet <- names(x)
+      names(x) <- paste0("Sheet", seq_along(x))
     }
   } else {
     if (length(sheet) != length(x)) {
@@ -174,7 +172,19 @@ qxl <- function(x,
         call. = FALSE
       )
     }
+    names(x) <- sheet
   }
+  # truncate sheet names if over 31 charactiers
+  if (any(nchar(names(x)) > 31)) {
+    warning("Truncating sheet name(s) to 31 characters")
+    names(x) <- substring(names(x), 1, 29)
+  }
+  # de-duplicate sheet names
+  if (length(unique(names(x))) < length(names(x))) {
+    warning("Deduplicating sheet names")
+    names(x) <- make.unique(substring(names(x), 1, 28), sep = "_")
+  }
+  sheet <- names(x)
 
   # prepare header
   if (is.null(header)) {
