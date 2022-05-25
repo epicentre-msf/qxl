@@ -178,5 +178,27 @@ test_that("basic functionality works as expected", {
 
   qxl(mtcars_split, file = file_write, overwrite = TRUE)
   expect_equal(mtcars_split[["cyl8"]], readxl::read_xlsx(file_write, "cyl8"))
+
+  # test sheet name truncation
+  sheets <- list(
+    "this_sheet_name_is_too_long_for_excel" = data.frame(x = 1, y = 2),
+    "seriously_what_an_absurd_length_for_a_sheet_name" = data.frame(x = 1, y = 2),
+    "why_do_I_keep_giving_these_sheets_such_long_names" = data.frame(x = 1, y = 2)
+  )
+
+  x <- suppressWarnings(qxl::qxl(sheets))
+  expect_equal(x$sheet_names, substr(names(sheets), 1, 29))
+
+  # test sheet name truncation with deduplication
+  sheets <- list(
+    "this_sheet_name_is_far_too_long_for_excel_1" = data.frame(x = 1, y = 2),
+    "this_sheet_name_is_far_too_long_for_excel_2" = data.frame(x = 1, y = 2),
+    "this_sheet_name_is_far_too_long_for_excel_3" = data.frame(x = 1, y = 2)
+  )
+
+  x <- suppressWarnings(qxl::qxl(sheets))
+
+  expect_true(all(nchar(x$sheet_names)) < 32)
+  expect_length(unique(x$sheet_names), 3L)
 })
 
