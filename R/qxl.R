@@ -174,16 +174,19 @@ qxl <- function(x,
     }
     names(x) <- sheet
   }
-  # truncate sheet names if over 31 charactiers
+
+  # truncate sheet names if over 31 characters
   if (any(nchar(names(x)) > 31)) {
     warning("Truncating sheet name(s) to 31 characters")
     names(x) <- substring(names(x), 1, 29)
   }
+
   # de-duplicate sheet names
   if (length(unique(names(x))) < length(names(x))) {
     warning("Deduplicating sheet names")
     names(x) <- make.unique(substring(names(x), 1, 28), sep = "_")
   }
+
   sheet <- names(x)
 
   # prepare header
