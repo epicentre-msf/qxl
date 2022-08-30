@@ -119,7 +119,8 @@
 #' a group index variable called `g` which is assigned a value of either `1` or
 #' `0`: `1` for the 1st group, `0` for the 2nd, `1` for the 3rd, `0` for the
 #' 4th, etc. The style specified by `group_style` is then applied conditionally
-#' to rows where `g == 0`.
+#' to rows where `g == 0`. The grouping variable is written in column A, which
+#' is hidden.
 #'
 #' @return
 #' If argument `file` is not specified, returns an openxlsx workbook object.
@@ -517,15 +518,6 @@ qxl_ <- function(x,
 
   if (has_group) {
 
-    # apply_row_style(
-    #   data = x,
-    #   wb = wb,
-    #   sheet = sheet,
-    #   style = group_style,
-    #   data_start_row = data_start_row,
-    #   nrow_x = nrow_x
-    # )
-
     openxlsx::conditionalFormatting(
       wb = wb,
       sheet = sheet,
@@ -533,6 +525,15 @@ qxl_ <- function(x,
       rows = data_start_row:nrow_x,
       rule = paste0("$A", data_start_row, "==0"),
       style = group_style$style
+    )
+
+    suppressWarnings(
+      openxlsx::groupColumns(
+        wb = wb,
+        sheet = sheet,
+        cols = 1,
+        hidden = TRUE
+      )
     )
   }
 

@@ -182,7 +182,8 @@ an alternating pattern. The alternating pattern is achieved by first creating
 a group index variable called \code{g} which is assigned a value of either \code{1} or
 \code{0}: \code{1} for the 1st group, \code{0} for the 2nd, \code{1} for the 3rd, \code{0} for the
 4th, etc. The style specified by \code{group_style} is then applied conditionally
-to rows where \code{g == 0}.
+to rows where \code{g == 0}. The grouping variable is written in column A, which
+is hidden.
 }
 
 \examples{
