@@ -116,10 +116,10 @@
 #' `qxl` function arranges the rows of the resulting worksheet by group and then
 #' applies the style `group_style` to the rows in every *other* group, to create
 #' an alternating pattern. The alternating pattern is achieved by first creating
-#' a group index variable called `i` which is assigned a value of either `1` or
+#' a group index variable called `g` which is assigned a value of either `1` or
 #' `0`: `1` for the 1st group, `0` for the 2nd, `1` for the 3rd, `0` for the
 #' 4th, etc. The style specified by `group_style` is then applied conditionally
-#' to rows where `i == 1`.
+#' to rows where `g == 0`.
 #'
 #' @return
 #' If argument `file` is not specified, returns an openxlsx workbook object.
@@ -268,8 +268,7 @@ qxl <- function(x,
 #' @import openxlsx
 #' @importFrom stats setNames
 #' @importFrom dplyr everything select mutate arrange relocate `%>%` all_of
-#'   bind_rows
-#' @importFrom tidyr unite
+#'   bind_rows across cur_group_id group_by ungroup
 #' @importFrom rlang enquo quo_get_expr .data
 qxl_ <- function(x,
                  file = NULL,
@@ -303,14 +302,16 @@ qxl_ <- function(x,
   has_group <- !missing(group)
 
   if (has_group) {
+
     x <- x %>%
-      tidyr::unite("g", dplyr::all_of(group), sep = " ", remove = FALSE) %>%
-      dplyr::relocate(.data$g, .before = 1) %>%
-      dplyr::arrange(.data$g) %>%
-      dplyr::mutate(g = as.integer(factor(.data$g)) %% 2L)
+      arrange(across(all_of(group))) %>%
+      group_by(across(all_of(group))) %>%
+      mutate(g = cur_group_id() %% 2L, .before = 1L) %>%
+      ungroup()
 
     header <- if (!is.null(names(header))) c("g" = "Grouping", header) else c("g", header)
   }
+
 
   ### initialize ---------------------------------------------------------------
   options("openxlsx.dateFormat" = date_format)

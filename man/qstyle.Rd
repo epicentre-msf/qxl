@@ -152,12 +152,14 @@ translated to the Excel formula equivalent and applied as conditional
 formatting to the worksheet.
 
 For example, given the following \code{qstyle} specification with respect to the
-\code{\link{mtcars}} dataset\preformatted{qstyle(
+\code{\link{mtcars}} dataset
+
+\if{html}{\out{<div class="sourceCode">}}\preformatted{qstyle(
   rows = .x == 1,
   cols = c(vs, am, carb),
   bgFill = "#FFC7CE"
 )
-}
+}\if{html}{\out{</div>}}
 
 the style \code{bgFill = "#FFC7CE"} would be independently applied to any cell in
 columns \code{vs}, \code{am}, or \code{carb} with a value of \code{1}.
