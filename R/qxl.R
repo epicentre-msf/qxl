@@ -577,16 +577,18 @@ qxl_ <- function(x,
       i_rng <- range(which(validate_df[[1]] %in% j)) + valid_start - 1L
       excel_range <- paste0("'valid_options'!", "$B$", i_rng[1], ":", "$B$", i_rng[2])
 
-      openxlsx::dataValidation(
-        wb,
-        sheet,
-        cols = which(names(x) %in% j),
-        rows = data_start_row:nrow_x,
-        type = "list",
-        value = excel_range,
-        allowBlank = TRUE,
-        showInputMsg = TRUE,
-        showErrorMsg = TRUE
+      suppressWarnings(
+        openxlsx::dataValidation(
+          wb,
+          sheet,
+          cols = which(names(x) %in% j),
+          rows = data_start_row:nrow_x,
+          type = "list",
+          value = excel_range,
+          allowBlank = TRUE,
+          showInputMsg = TRUE,
+          showErrorMsg = TRUE
+        )
       )
     }
   }
@@ -652,16 +654,18 @@ qxl_ <- function(x,
 
       excel_range <- paste0("'valid_options_cond'!", "$B$", i_rng[1], ":", "$B$", i_rng[2])
 
-      openxlsx::dataValidation(
-        wb,
-        sheet,
-        col = which(names(x) %in% col_validation),
-        rows = data_start_row + i - 1,
-        type = "list",
-        value = excel_range,
-        allowBlank = TRUE,
-        showInputMsg = TRUE,
-        showErrorMsg = TRUE
+      suppressWarnings(
+        openxlsx::dataValidation(
+          wb,
+          sheet,
+          cols = which(names(x) %in% col_validation),
+          rows = data_start_row + i - 1,
+          type = "list",
+          value = excel_range,
+          allowBlank = TRUE,
+          showInputMsg = TRUE,
+          showErrorMsg = TRUE
+        )
       )
     }
   }
