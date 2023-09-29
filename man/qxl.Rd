@@ -11,6 +11,7 @@ qxl(
   sheet = NULL,
   header = NULL,
   style_head = qstyle(rows = 1, textDecoration = "bold"),
+  hide_subhead = TRUE,
   style1 = NULL,
   style2 = NULL,
   style3 = NULL,
@@ -50,9 +51,9 @@ from \code{names(x)}. Otherwise, names default to "Sheet1", "Sheet2", ...}
 
 \item{header}{Optional column header. Defaults to \code{NULL} in which case column
 names are taken directly from the data frame(s) in \code{x}, to create normal
-single-row headers. Can alternatively pass a named character
-vector to set custom names as the first row and variable names as a hidden
-second row.
+single-row headers. Can alternatively pass a named character vector to set
+custom names as the first row and a subheader with variable names as a
+hidden second row.
 
 \if{html}{\out{<div class="sourceCode">}}\preformatted{header = c(
   mpg = "Miles per US gallon",
@@ -63,6 +64,9 @@ second row.
 
 \item{style_head}{Style for the header row. Set with \code{\link[=qstyle]{qstyle()}}, or set to
 \code{NULL} for no header styling. Defaults to bold text.}
+
+\item{hide_subhead}{Logical indicating whether to hide the subheader (if
+present). Defaults to TRUE.}
 
 \item{style1, style2, style3, style4, style5}{Optional style to set using \code{\link[=qstyle]{qstyle()}}}
 

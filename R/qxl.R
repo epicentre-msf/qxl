@@ -20,9 +20,9 @@
 #'   from `names(x)`. Otherwise, names default to "Sheet1", "Sheet2", ...
 #' @param header Optional column header. Defaults to `NULL` in which case column
 #'   names are taken directly from the data frame(s) in `x`, to create normal
-#'   single-row headers. Can alternatively pass a named character
-#'   vector to set custom names as the first row and variable names as a hidden
-#'   second row.
+#'   single-row headers. Can alternatively pass a named character vector to set
+#'   custom names as the first row and a subheader with variable names as a
+#'   hidden second row.
 #'   ```
 #'   header = c(
 #'     mpg = "Miles per US gallon",
@@ -32,6 +32,8 @@
 #'   ```
 #' @param style_head Style for the header row. Set with [`qstyle()`], or set to
 #'   `NULL` for no header styling. Defaults to bold text.
+#' @param hide_subhead Logical indicating whether to hide the subheader (if
+#'   present). Defaults to TRUE.
 #' @param style1,style2,style3,style4,style5 Optional style to set using [`qstyle()`]
 #' @param group Optional vector of one or more column names used to create
 #'   alternating groupings of rows, with every other row grouping styled as per
@@ -137,6 +139,7 @@ qxl <- function(x,
                 sheet = NULL,
                 header = NULL,
                 style_head = qstyle(rows = 1, textDecoration = "bold"),
+                hide_subhead = TRUE,
                 style1 = NULL,
                 style2 = NULL,
                 style3 = NULL,
@@ -204,6 +207,7 @@ qxl <- function(x,
     sheet = sheet[1],
     header = header[[1]],
     style_head = style_head,
+    hide_subhead = hide_subhead,
     style1 = style1,
     style2 = style2,
     style3 = style3,
@@ -233,6 +237,7 @@ qxl <- function(x,
       sheet = sheet[i],
       header = header[[i]],
       style_head = style_head,
+      hide_subhead = hide_subhead,
       style1 = style1,
       style2 = style2,
       style3 = style3,
@@ -277,6 +282,7 @@ qxl_ <- function(x,
                  sheet = "Sheet1",
                  header = names(x),
                  style_head = qstyle(rows = 1, textDecoration = "bold"),
+                 hide_subhead = TRUE,
                  style1 = NULL,
                  style2 = NULL,
                  style3 = NULL,
@@ -329,14 +335,18 @@ qxl_ <- function(x,
       rbind(stats::setNames(names(header), header)),
       colNames = TRUE
     )
-    suppressWarnings( # bug in openxlsx generates unnecessary warning
-      openxlsx::groupRows(
-        wb,
-        sheet,
-        rows = 2,
-        hidden = TRUE
+
+    if (hide_subhead) {
+      suppressWarnings( # bug in openxlsx generates unnecessary warning
+        openxlsx::groupRows(
+          wb,
+          sheet,
+          rows = 2,
+          hidden = TRUE
+        )
       )
-    )
+    }
+
     openxlsx::addStyle(
       wb,
       sheet,
@@ -570,7 +580,7 @@ qxl_ <- function(x,
       openxlsx::dataValidation(
         wb,
         sheet,
-        col = which(names(x) %in% j),
+        cols = which(names(x) %in% j),
         rows = data_start_row:nrow_x,
         type = "list",
         value = excel_range,
