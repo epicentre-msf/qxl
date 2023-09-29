@@ -7,7 +7,7 @@
 
 [![Lifecycle:
 experimental](https://img.shields.io/badge/lifecycle-experimental-orange.svg)](https://www.tidyverse.org/lifecycle/#experimental)
-[![R-CMD-check](https://github.com/epicentre-msf/queryr/workflows/R-CMD-check/badge.svg)](https://github.com/epicentre-msf/qxl/actions)
+[![R-CMD-check](https://github.com/epicentre-msf/qxl/workflows/R-CMD-check/badge.svg)](https://github.com/epicentre-msf/qxl/actions)
 [![Codecov test
 coverage](https://codecov.io/gh/epicentre-msf/qxl/branch/main/graph/badge.svg)](https://codecov.io/gh/epicentre-msf/qxl?branch=main)
 <!-- badges: end -->
@@ -16,11 +16,11 @@ A wrapper to the [openxlsx](https://github.com/ycphs/openxlsx) package
 optimized for writing flat data structures. Includes arguments to
 quickly add customization like:
 
--   conditional formatting written as R expressions
--   data validation rules based on a tidy dictionary structure
--   column-specific worksheet protection
--   custom column names with original variable-names hidden in the row
-    below
+- conditional formatting written as R expressions
+- data validation rules based on a tidy dictionary structure
+- column-specific worksheet protection
+- custom column names with original variable-names hidden in the row
+  below
 
 ## Installation
 
@@ -164,7 +164,7 @@ readxl::read_xlsx(file.path(path_write, "mtcars_header.xlsx"), skip = 1)
     ##  8 Merc 240D          24.4     4  147.    62  3.69  3.19  20       1     0     4     2 NA    NA   
     ##  9 Merc 230           22.8     4  141.    95  3.92  3.15  22.9     1     0     4     2 NA    NA   
     ## 10 Merc 280           19.2     6  168.   123  3.92  3.44  18.3     1     0     4     4 NA    NA   
-    ## # … with 22 more rows
+    ## # ℹ 22 more rows
 
 ### Alternating row groupings
 
