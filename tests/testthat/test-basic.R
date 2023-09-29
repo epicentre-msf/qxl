@@ -200,5 +200,17 @@ test_that("basic functionality works as expected", {
 
   expect_true(all(nchar(x$sheet_names)) < 32)
   expect_length(unique(x$sheet_names), 3L)
+
+  # test writing columns of chron class 'times' (issue #5)
+  df <- data.frame(
+    x1 = 1:2,
+    x2 = structure(c(0.1, 0.3), format = "h:m:s", class = "times")
+  )
+
+  qxl(df, file = file_write)
+
+  x <- qread(file_write)
+  expect_equal(x$x2, as.character(df$x2))
+
 })
 

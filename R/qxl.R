@@ -362,7 +362,7 @@ qxl_ <- function(x,
     openxlsx::writeData(
       wb,
       sheet = sheet,
-      x[0,],
+      cols_to_chr(x[0, , drop = FALSE]),
       colNames = TRUE
     )
   }

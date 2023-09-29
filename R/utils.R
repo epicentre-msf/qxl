@@ -107,3 +107,9 @@ paste_collapse_c <- function(x, quote = TRUE, collapse = ", ") {
   paste0("c(", paste_collapse(x, quote = quote, collapse = collapse), ")")
 }
 
+
+#' @noRd
+cols_to_chr <- function(x) {
+  as.data.frame(lapply(x, function(x) character()))
+}
+
