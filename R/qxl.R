@@ -86,17 +86,17 @@
 #'   "valid_options".
 #' @param validate_cond Optional specification of conditional list-style
 #'   validation, where the set of values to be allowed in a given column depends
-#'   on the corresponding value within another column (e.g. the allowed values
-#'   in column 'city' depend on the corresponding value in column 'province').
-#'   Must be a data.frame with two columns, where the first column gives the
-#'   conditional entries (e.g. 'province') and the second column gives with
-#'   corresponding allowed entries (e.g. 'city') to be implemented as data
-#'   validation. The column names of `validate_cond` should match the relevant
-#'   columns within `x`.
+#'   on the corresponding value within one or more other columns (e.g. the
+#'   allowed values in column 'city' depend on the corresponding value in
+#'   columns 'country' and 'province'). Must be a data.frame with at least two
+#'   columns, where the first column(s) give the conditional entries (e.g.
+#'   'country', 'province') and the last column gives the corresponding allowed
+#'   entries (e.g. 'city') to be implemented as data validation. The column
+#'   names in `validate_cond` should match the relevant columns within `x`.
 #'
 #'   Note that in the current implementation validation is based on values in
-#'   the conditional column of `x` at the time the workbook is written, and will
-#'   not update in real time if those values are later changed.
+#'   the conditional column(s) of `x` at the time the workbook is written, and
+#'   will not update in real time if those values are later changed.
 #' @param validate_cond_all Optional vector of value(s) to always allow,
 #'   independent of the value in the conditional column (e.g. "Unknown").
 #' @param filter Logical indicating whether to add column filters.
@@ -274,8 +274,11 @@ qxl <- function(x,
 #' @import openxlsx
 #' @importFrom stats setNames
 #' @importFrom dplyr everything select mutate arrange relocate `%>%` all_of
-#'   bind_rows across cur_group_id group_by ungroup
-#' @importFrom rlang enquo quo_get_expr .data
+#'   bind_rows across cur_group_id group_by ungroup n summarize left_join
+#'   distinct
+#' @importFrom rlang enquo ensym quo_get_expr .data .env `!!` `:=`
+#' @importFrom tidyr unnest
+#'
 qxl_ <- function(x,
                  file = NULL,
                  wb = openxlsx::createWorkbook(),
@@ -603,32 +606,29 @@ qxl_ <- function(x,
       validate_cond_df <- list_to_df(validate_cond)
     }
 
-    if (ncol(validate_cond_df) != 2) {
-      stop("Argument `validate_cond` must be a data frame with 2 columns")
-    }
+    which_col_validation <- ncol(validate_cond_df)
+    excel_col_validation <- LETTERS[which_col_validation]
 
-    col_cond <- names(validate_cond_df)[1]
-    col_validation <- names(validate_cond_df)[2]
+    col_validation <- names(validate_cond_df)[which_col_validation]
+    cols_cond <- setdiff(names(validate_cond_df), col_validation)
 
     if (!is.null(validate_cond_all)) {
 
-      validate_cond_all_df <- expand.grid(
-        x = unique(validate_cond_df[[col_cond]]),
-        y = validate_cond_all
-      )
+      validate_cond_all_df <- validate_cond_df %>%
+        distinct(across(all_of(cols_cond))) %>%
+        mutate(!!ensym(col_validation) := list(validate_cond_all)) %>%
+        tidyr::unnest(all_of(col_validation))
 
-      validate_cond_all_df <- stats::setNames(
-        validate_cond_all_df,
-        c(col_cond, col_validation)
-      )
-
-      validate_cond_df <- dplyr::bind_rows(validate_cond_df, validate_cond_all_df)
-      validate_cond_df <- validate_cond_df[order(validate_cond_df[[1]]), , drop = FALSE]
+      validate_cond_df <- validate_cond_df %>%
+        bind_rows(validate_cond_all_df) %>%
+        arrange(across(all_of(cols_cond)))
     }
 
-    if (!col_cond %in% names(x)) {
-      stop("First column in argument `validate_cond` must be a column name in `x`")
+    if (!all(cols_cond %in% names(x))) {
+      stop("Columns in argument `validate_cond` must also be column names in `x`")
     }
+
+    # TODO: this needs to be moved up so that the new colname is actually written
     if (!col_validation %in% names(x)) {
       x[[col_validation]] <- NA_character_
     }
@@ -648,11 +648,31 @@ qxl_ <- function(x,
       colNames = FALSE
     )
 
+    validate_indices <- validate_cond_df %>%
+      mutate(rowid = seq_len(n())) %>%
+      group_by(across(all_of(cols_cond))) %>%
+      summarize(
+        range_min = min(.data$rowid) + .env$valid_cond_start - 1L,
+        range_max = max(.data$rowid) + .env$valid_cond_start - 1L,
+        .groups = "drop"
+      )
+
+    x_validate <- x %>%
+      left_join(validate_indices, by = cols_cond) %>%
+      mutate(
+        excel_range = paste0(
+          "'valid_options_cond'!$",
+          .env$excel_col_validation,
+          "$",
+          .data$range_min,
+          ":$",
+          .env$excel_col_validation,
+          "$",
+          .data$range_max
+        )
+      )
+
     for (i in seq_len(nrow(x))) {
-
-      i_rng <- range(which(validate_cond_df[[col_cond]] %in% x[[col_cond]][i])) + valid_cond_start - 1
-
-      excel_range <- paste0("'valid_options_cond'!", "$B$", i_rng[1], ":", "$B$", i_rng[2])
 
       suppressWarnings(
         openxlsx::dataValidation(
@@ -661,7 +681,7 @@ qxl_ <- function(x,
           cols = which(names(x) %in% col_validation),
           rows = data_start_row + i - 1,
           type = "list",
-          value = excel_range,
+          value = x_validate$excel_range[i],
           allowBlank = TRUE,
           showInputMsg = TRUE,
           showErrorMsg = TRUE

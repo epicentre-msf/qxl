@@ -130,17 +130,17 @@ Validation options are written/appended to a hidden worksheet named
 
 \item{validate_cond}{Optional specification of conditional list-style
 validation, where the set of values to be allowed in a given column depends
-on the corresponding value within another column (e.g. the allowed values
-in column 'city' depend on the corresponding value in column 'province').
-Must be a data.frame with two columns, where the first column gives the
-conditional entries (e.g. 'province') and the second column gives with
-corresponding allowed entries (e.g. 'city') to be implemented as data
-validation. The column names of \code{validate_cond} should match the relevant
-columns within \code{x}.
+on the corresponding value within one or more other columns (e.g. the
+allowed values in column 'city' depend on the corresponding value in
+columns 'country' and 'province'). Must be a data.frame with at least two
+columns, where the first column(s) give the conditional entries (e.g.
+'country', 'province') and the last column gives the corresponding allowed
+entries (e.g. 'city') to be implemented as data validation. The column
+names in \code{validate_cond} should match the relevant columns within \code{x}.
 
 Note that in the current implementation validation is based on values in
-the conditional column of \code{x} at the time the workbook is written, and will
-not update in real time if those values are later changed.}
+the conditional column(s) of \code{x} at the time the workbook is written, and
+will not update in real time if those values are later changed.}
 
 \item{validate_cond_all}{Optional vector of value(s) to always allow,
 independent of the value in the conditional column (e.g. "Unknown").}
