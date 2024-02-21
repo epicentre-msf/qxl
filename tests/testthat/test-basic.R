@@ -208,9 +208,20 @@ test_that("basic functionality works as expected", {
   )
 
   qxl(df, file = file_write)
-
   x <- qread(file_write)
   expect_equal(x$x2, as.character(df$x2))
+
+  # test writing tibble with colnames with special chars
+  # previous use of as.data.frame(as.list(x)) was replacing special vars
+  df <- dplyr::tibble(
+    `# of record` = 1:3,
+    `Spec|@l chars!` = LETTERS[1:3]
+  )
+
+  qxl(df, file = file_write)
+
+  x <- qread(file_write)
+  expect_equal(names(x), names(df))
 
 })
 

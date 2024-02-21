@@ -110,6 +110,11 @@ paste_collapse_c <- function(x, quote = TRUE, collapse = ", ") {
 
 #' @noRd
 cols_to_chr <- function(x) {
-  as.data.frame(lapply(x, function(x) character()))
+
+  for (j in seq_len(ncol(x))) {
+    x[[j]] <- as.character(x[[j]])
+  }
+
+  x
 }
 
