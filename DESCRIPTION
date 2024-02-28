@@ -21,10 +21,10 @@ Imports:
     openxlsx,
     readxl,
     dplyr,
-    tidyr,
     rlang,
     lubridate
 Suggests: 
     testthat (>= 3.0.0),
     tibble,
+    tidyr,
     covr

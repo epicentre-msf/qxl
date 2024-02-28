@@ -161,6 +161,7 @@ qxl <- function(x,
                 date_format = "yyyy-mm-dd",
                 overwrite = TRUE) {
 
+
   # convert x to list if single data frame
   if (is.data.frame(x)) { x <- list(x) }
 
@@ -276,8 +277,7 @@ qxl <- function(x,
 #' @importFrom dplyr everything select mutate arrange relocate `%>%` all_of
 #'   bind_rows across cur_group_id group_by ungroup n summarize left_join
 #'   distinct
-#' @importFrom rlang enquo ensym quo_get_expr .data .env `!!` `:=`
-#' @importFrom tidyr unnest
+#' @importFrom rlang enquo quo_get_expr .data .env `!!`
 #'
 qxl_ <- function(x,
                  file = NULL,
@@ -614,10 +614,11 @@ qxl_ <- function(x,
 
     if (!is.null(validate_cond_all)) {
 
-      validate_cond_all_df <- validate_cond_df %>%
-        distinct(across(all_of(cols_cond))) %>%
-        mutate(!!ensym(col_validation) := list(validate_cond_all)) %>%
-        tidyr::unnest(all_of(col_validation))
+      validate_cond_all_df <- expand.grid(
+        x = sort(unique(x[[cols_cond]])),
+        y = validate_cond_all
+      ) %>%
+        stats::setNames(c(cols_cond, col_validation))
 
       validate_cond_df <- validate_cond_df %>%
         bind_rows(validate_cond_all_df) %>%
@@ -674,19 +675,21 @@ qxl_ <- function(x,
 
     for (i in seq_len(nrow(x))) {
 
-      suppressWarnings(
-        openxlsx::dataValidation(
-          wb,
-          sheet,
-          cols = which(names(x) %in% col_validation),
-          rows = data_start_row + i - 1,
-          type = "list",
-          value = x_validate$excel_range[i],
-          allowBlank = TRUE,
-          showInputMsg = TRUE,
-          showErrorMsg = TRUE
+      if (!is.na(x_validate$range_min[i]) & !is.na(x_validate$range_max[i])) {
+        suppressWarnings(
+          openxlsx::dataValidation(
+            wb,
+            sheet,
+            cols = which(names(x) %in% col_validation),
+            rows = data_start_row + i - 1,
+            type = "list",
+            value = x_validate$excel_range[i],
+            allowBlank = TRUE,
+            showInputMsg = TRUE,
+            showErrorMsg = TRUE
+          )
         )
-      )
+      }
     }
   }
 
