@@ -274,6 +274,7 @@ qxl <- function(x,
 #' @noRd
 #' @import openxlsx
 #' @importFrom stats setNames
+#' @importFrom tidyr unnest
 #' @importFrom dplyr everything select mutate arrange relocate `%>%` all_of
 #'   bind_rows across cur_group_id group_by ungroup n summarize left_join
 #'   distinct
@@ -614,14 +615,12 @@ qxl_ <- function(x,
 
     if (!is.null(validate_cond_all)) {
 
-      validate_cond_all_df <- expand.grid(
-        x = sort(unique(x[[cols_cond]])),
-        y = validate_cond_all
-      ) %>%
+      validate_cond_all_df <- unique(x[,cols_cond, drop = FALSE]) %>%
+        mutate(replacement = list(validate_cond_all)) %>%
+        tidyr::unnest("replacement") %>%
         stats::setNames(c(cols_cond, col_validation))
 
-      validate_cond_df <- validate_cond_df %>%
-        bind_rows(validate_cond_all_df) %>%
+      validate_cond_df <- bind_rows(validate_cond_df, validate_cond_all_df) %>%
         arrange(across(all_of(cols_cond)))
     }
 

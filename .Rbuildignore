@@ -1,5 +1,6 @@
 ^qxl\.Rproj$
 ^\.Rproj\.user$
+^archive$
 ^data-raw$
 ^README\.Rmd$
 ^LICENSE\.md$

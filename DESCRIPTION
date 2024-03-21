@@ -22,9 +22,9 @@ Imports:
     readxl,
     dplyr,
     rlang,
+    tidyr,
     lubridate
 Suggests: 
     testthat (>= 3.0.0),
     tibble,
-    tidyr,
     covr
