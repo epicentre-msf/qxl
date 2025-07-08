@@ -19,6 +19,8 @@
 #' @param row_buffer The number of additional rows (beyond the range of the
 #'   current data) to unprotect within columns not specified in argument `cols`.
 #'   See explanation in Description. Defaults to `0`.
+#' @param col_buffer The number of additional columns (beyond the range of the
+#'   current data) to unprotect. Defaults to `0`.
 #'
 #' @inheritParams openxlsx::protectWorksheet
 #'
@@ -29,6 +31,7 @@
 qprotect <- function(password = NULL,
                      cols = everything(),
                      row_buffer = 0L,
+                     col_buffer = 0L,
                      protect = TRUE,
                      lockSelectingLockedCells = FALSE,
                      lockSelectingUnlockedCells = FALSE,
@@ -50,6 +53,7 @@ qprotect <- function(password = NULL,
     password = password,
     cols = rlang::enquo(cols),
     row_buffer = row_buffer,
+    col_buffer = col_buffer,
     protect = protect,
     lockSelectingLockedCells = lockSelectingLockedCells,
     lockSelectingUnlockedCells = lockSelectingUnlockedCells,

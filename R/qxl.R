@@ -34,12 +34,15 @@
 #'   `NULL` for no header styling. Defaults to bold text.
 #' @param hide_subhead Logical indicating whether to hide the subheader (if
 #'   present). Defaults to TRUE.
-#' @param style1,style2,style3,style4,style5 Optional style to set using [`qstyle()`]
+#' @param style1,style2,style3,style4,style5,style6,style7,style8,style9
+#'   Optional style to set using [`qstyle()`]
 #' @param group Optional vector of one or more column names used to create
 #'   alternating groupings of rows, with every other row grouping styled as per
 #'   argument `group_style`. See section __Grouping rows__.
 #' @param group_style Optional style to apply to alternating groupings of rows,
 #'   as specified using argument `groups`. Set using [`qstyle()`]
+#' @param group_border Optional border to apply to alternating groupings of
+#'   rows, as specified using argument `groups`.
 #' @param row_heights Numeric vector of row heights (in Excel units). The vector
 #'   is recycled if shorter than the number of rows in `x`. Defaults to `NULL`
 #'   to use default row heights.
@@ -59,6 +62,7 @@
 #'   # specify widths for cols mpg and cyl, and explicit default for all others
 #'   col_widths <- c(mpg = 5, cyl = 10, .default = 7)
 #'   ```
+#' @param cols_hide Vector of column names for columns to be hidden.
 #' @param freeze_row Integer specifying a row to freeze at. Defaults to `1` to
 #'   add a freeze below the header row. Set to `0` or `NULL` to omit freezing.
 #' @param freeze_col Integer specifying a column to freeze at. Defaults to
@@ -145,10 +149,16 @@ qxl <- function(x,
                 style3 = NULL,
                 style4 = NULL,
                 style5 = NULL,
+                style6 = NULL,
+                style7 = NULL,
+                style8 = NULL,
+                style9 = NULL,
                 group,
                 group_style = qstyle(bgFill = "#ffcccb"),
+                group_border = TRUE,
                 row_heights = NULL,
                 col_widths = "auto",
+                cols_hide = NULL,
                 freeze_row = 1L,
                 freeze_col = NULL,
                 protect,
@@ -214,10 +224,16 @@ qxl <- function(x,
     style3 = style3,
     style4 = style4,
     style5 = style5,
+    style6 = style6,
+    style7 = style7,
+    style8 = style8,
+    style9 = style9,
     group = group,
     group_style = group_style,
+    group_border = group_border,
     row_heights = row_heights,
     col_widths = col_widths,
+    cols_hide = cols_hide,
     freeze_row = freeze_row,
     freeze_col = freeze_col,
     protect = protect,
@@ -244,10 +260,16 @@ qxl <- function(x,
       style3 = style3,
       style4 = style4,
       style5 = style5,
+      style6 = style6,
+      style7 = style7,
+      style8 = style8,
+      style9 = style9,
       group = group,
       group_style = group_style,
+      group_border = group_border,
       row_heights = row_heights,
       col_widths = col_widths,
+      cols_hide = cols_hide,
       freeze_row = freeze_row,
       freeze_col = freeze_col,
       protect = protect,
@@ -292,10 +314,16 @@ qxl_ <- function(x,
                  style3 = NULL,
                  style4 = NULL,
                  style5 = NULL,
+                 style6 = NULL,
+                 style7 = NULL,
+                 style8 = NULL,
+                 style9 = NULL,
                  group,
                  group_style = qstyle(bgFill = "#ffcccb"),
+                 group_border = TRUE,
                  row_heights = NULL,
                  col_widths = "auto",
+                 cols_hide = NULL,
                  freeze_row = 1L,
                  freeze_col = NULL,
                  protect,
@@ -416,7 +444,13 @@ qxl_ <- function(x,
       }
     }
 
-    openxlsx::setColWidths(wb, sheet, cols = seq_len(ncol_x), widths = col_widths)
+    openxlsx::setColWidths(
+      wb,
+      sheet,
+      cols = seq_len(ncol_x),
+      widths = col_widths,
+      hidden = names(x) %in% cols_hide
+    )
   }
 
   ### freeze panes -------------------------------------------------------------
@@ -438,7 +472,7 @@ qxl_ <- function(x,
     protect_args <- c(
       wb = wb,
       sheet = sheet,
-      protect[!names(protect) %in% c("cols", "row_buffer")]
+      protect[!names(protect) %in% c("cols", "row_buffer", "col_buffer")]
     )
 
     do.call(openxlsx::protectWorksheet, protect_args)
@@ -453,6 +487,19 @@ qxl_ <- function(x,
       gridExpand = TRUE,
       stack = TRUE
     )
+
+    # unprotect buffer cols
+    if (protect$col_buffer > 0) {
+      openxlsx::addStyle(
+        wb,
+        sheet,
+        style = unprotect(),
+        rows = seq(1L, nrow_x + protect$row_buffer, by = 1L),
+        cols = seq_len(protect$col_buffer) + ncol_x,
+        gridExpand = TRUE,
+        stack = TRUE
+      )
+    }
   }
 
 
@@ -530,6 +577,50 @@ qxl_ <- function(x,
     )
   }
 
+  if (!is.null(style6)) {
+    apply_row_style(
+      data = x,
+      wb = wb,
+      sheet = sheet,
+      style = style6,
+      data_start_row = data_start_row,
+      nrow_x = nrow_x
+    )
+  }
+
+  if (!is.null(style7)) {
+    apply_row_style(
+      data = x,
+      wb = wb,
+      sheet = sheet,
+      style = style7,
+      data_start_row = data_start_row,
+      nrow_x = nrow_x
+    )
+  }
+
+    if (!is.null(style8)) {
+      apply_row_style(
+        data = x,
+        wb = wb,
+        sheet = sheet,
+        style = style8,
+        data_start_row = data_start_row,
+        nrow_x = nrow_x
+      )
+    }
+
+    if (!is.null(style9)) {
+      apply_row_style(
+        data = x,
+        wb = wb,
+        sheet = sheet,
+        style = style9,
+        data_start_row = data_start_row,
+        nrow_x = nrow_x
+      )
+    }
+
   if (has_group) {
 
     openxlsx::conditionalFormatting(
@@ -549,6 +640,24 @@ qxl_ <- function(x,
         hidden = TRUE
       )
     )
+
+    if (group_border) {
+
+      df_borders <- x %>%
+        mutate(temp__rowid__ = 1:n()) %>%
+        group_by(across(all_of(group))) %>%
+        summarize(temp__rowid__ = min(.data$temp__rowid__) + .env$data_start_row - 1L, .groups = "drop")
+
+      openxlsx::addStyle(
+        wb = wb,
+        sheet = sheet,
+        style = openxlsx::createStyle(border = "top"),
+        rows = df_borders$temp__rowid__,
+        cols = seq_len(ncol_x),
+        gridExpand = TRUE,
+        stack = TRUE
+      )
+    }
   }
 
 

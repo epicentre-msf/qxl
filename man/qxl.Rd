@@ -17,10 +17,16 @@ qxl(
   style3 = NULL,
   style4 = NULL,
   style5 = NULL,
+  style6 = NULL,
+  style7 = NULL,
+  style8 = NULL,
+  style9 = NULL,
   group,
   group_style = qstyle(bgFill = "#ffcccb"),
+  group_border = TRUE,
   row_heights = NULL,
   col_widths = "auto",
+  cols_hide = NULL,
   freeze_row = 1L,
   freeze_col = NULL,
   protect,
@@ -68,7 +74,7 @@ hidden second row.
 \item{hide_subhead}{Logical indicating whether to hide the subheader (if
 present). Defaults to TRUE.}
 
-\item{style1, style2, style3, style4, style5}{Optional style to set using \code{\link[=qstyle]{qstyle()}}}
+\item{style1, style2, style3, style4, style5, style6, style7, style8, style9}{Optional style to set using \code{\link[=qstyle]{qstyle()}}}
 
 \item{group}{Optional vector of one or more column names used to create
 alternating groupings of rows, with every other row grouping styled as per
@@ -76,6 +82,9 @@ argument \code{group_style}. See section \strong{Grouping rows}.}
 
 \item{group_style}{Optional style to apply to alternating groupings of rows,
 as specified using argument \code{groups}. Set using \code{\link[=qstyle]{qstyle()}}}
+
+\item{group_border}{Optional border to apply to alternating groupings of
+rows, as specified using argument \code{groups}.}
 
 \item{row_heights}{Numeric vector of row heights (in Excel units). The vector
 is recycled if shorter than the number of rows in \code{x}. Defaults to \code{NULL}
@@ -96,6 +105,8 @@ col_widths <- c(mpg = 5, cyl = 10)
 # specify widths for cols mpg and cyl, and explicit default for all others
 col_widths <- c(mpg = 5, cyl = 10, .default = 7)
 }\if{html}{\out{</div>}}}
+
+\item{cols_hide}{Vector of column names for columns to be hidden.}
 
 \item{freeze_row}{Integer specifying a row to freeze at. Defaults to \code{1} to
 add a freeze below the header row. Set to \code{0} or \code{NULL} to omit freezing.}

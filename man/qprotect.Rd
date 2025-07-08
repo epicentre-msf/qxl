@@ -8,6 +8,7 @@ qprotect(
   password = NULL,
   cols = everything(),
   row_buffer = 0L,
+  col_buffer = 0L,
   protect = TRUE,
   lockSelectingLockedCells = FALSE,
   lockSelectingUnlockedCells = FALSE,
@@ -35,6 +36,9 @@ apply to. Defaults to \code{\link[dplyr:reexports]{dplyr::everything}} to select
 \item{row_buffer}{The number of additional rows (beyond the range of the
 current data) to unprotect within columns not specified in argument \code{cols}.
 See explanation in Description. Defaults to \code{0}.}
+
+\item{col_buffer}{The number of additional columns (beyond the range of the
+current data) to unprotect. Defaults to \code{0}.}
 
 \item{protect}{Whether to protect or unprotect the sheet (default=TRUE)}
 
