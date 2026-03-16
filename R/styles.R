@@ -120,10 +120,9 @@ qstyle <- function(rows = "data",
   }
 
   # return
-  list(
-    rows = rows,
-    cols = cols,
-    style = style
+  structure(
+    list(rows = rows, cols = cols, style = style),
+    class = "qstyle"
   )
 }
 

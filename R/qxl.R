@@ -34,8 +34,14 @@
 #'   `NULL` for no header styling. Defaults to bold text.
 #' @param hide_subhead Logical indicating whether to hide the subheader (if
 #'   present). Defaults to TRUE.
+#' @param style Optional style, or list of styles, set using [`qstyle()`].
+#'   Accepts any number of [`qstyle()`] objects:
+#'   ```
+#'   style = qstyle(halign = "center")
+#'   style = list(qstyle(halign = "center"), qstyle(rows = cyl > 4, bgFill = "#fddbc7"))
+#'   ```
 #' @param style1,style2,style3,style4,style5,style6,style7,style8,style9
-#'   Optional style to set using [`qstyle()`]
+#'   `r lifecycle::badge("deprecated")` Use `style` instead.
 #' @param group Optional vector of one or more column names used to create
 #'   alternating groupings of rows, with every other row grouping styled as per
 #'   argument `group_style`. See section __Grouping rows__.
@@ -144,6 +150,7 @@ qxl <- function(x,
                 header = NULL,
                 style_head = qstyle(rows = 1, textDecoration = "bold"),
                 hide_subhead = TRUE,
+                style = NULL,
                 style1 = NULL,
                 style2 = NULL,
                 style3 = NULL,
@@ -171,6 +178,30 @@ qxl <- function(x,
                 date_format = "yyyy-mm-dd",
                 overwrite = TRUE) {
 
+
+  # handle deprecated style1-style9 args
+  deprecated_styles <- list(style1, style2, style3, style4, style5,
+                             style6, style7, style8, style9)
+  deprecated_styles <- Filter(Negate(is.null), deprecated_styles)
+
+  if (length(deprecated_styles) > 0) {
+    warning(
+      "Arguments `style1`-`style9` are deprecated. ",
+      "Use argument `style` with a list of `qstyle()` objects instead.",
+      call. = FALSE
+    )
+    if (is.null(style)) {
+      style <- deprecated_styles
+    } else {
+      style <- c(if (inherits(style, "qstyle")) list(style) else style,
+                 deprecated_styles)
+    }
+  }
+
+  # normalise style to a list of qstyle objects
+  if (inherits(style, "qstyle")) {
+    style <- list(style)
+  }
 
   # convert x to list if single data frame
   if (is.data.frame(x)) { x <- list(x) }
@@ -219,15 +250,7 @@ qxl <- function(x,
     header = header[[1]],
     style_head = style_head,
     hide_subhead = hide_subhead,
-    style1 = style1,
-    style2 = style2,
-    style3 = style3,
-    style4 = style4,
-    style5 = style5,
-    style6 = style6,
-    style7 = style7,
-    style8 = style8,
-    style9 = style9,
+    style = style,
     group = group,
     group_style = group_style,
     group_border = group_border,
@@ -255,15 +278,7 @@ qxl <- function(x,
       header = header[[i]],
       style_head = style_head,
       hide_subhead = hide_subhead,
-      style1 = style1,
-      style2 = style2,
-      style3 = style3,
-      style4 = style4,
-      style5 = style5,
-      style6 = style6,
-      style7 = style7,
-      style8 = style8,
-      style9 = style9,
+      style = style,
       group = group,
       group_style = group_style,
       group_border = group_border,
@@ -309,15 +324,7 @@ qxl_ <- function(x,
                  header = names(x),
                  style_head = qstyle(rows = 1, textDecoration = "bold"),
                  hide_subhead = TRUE,
-                 style1 = NULL,
-                 style2 = NULL,
-                 style3 = NULL,
-                 style4 = NULL,
-                 style5 = NULL,
-                 style6 = NULL,
-                 style7 = NULL,
-                 style8 = NULL,
-                 style9 = NULL,
+                 style = NULL,
                  group,
                  group_style = qstyle(bgFill = "#ffcccb"),
                  group_border = TRUE,
@@ -522,104 +529,16 @@ qxl_ <- function(x,
     )
   }
 
-  if (!is.null(style1)) {
+  for (s in style) {
     apply_row_style(
       data = x,
       wb = wb,
       sheet = sheet,
-      style = style1,
+      style = s,
       data_start_row = data_start_row,
       nrow_x = nrow_x
     )
   }
-
-  if (!is.null(style2)) {
-    apply_row_style(
-      data = x,
-      wb = wb,
-      sheet = sheet,
-      style = style2,
-      data_start_row = data_start_row,
-      nrow_x = nrow_x
-    )
-  }
-
-  if (!is.null(style3)) {
-    apply_row_style(
-      data = x,
-      wb = wb,
-      sheet = sheet,
-      style = style3,
-      data_start_row = data_start_row,
-      nrow_x = nrow_x
-    )
-  }
-
-  if (!is.null(style4)) {
-    apply_row_style(
-      data = x,
-      wb = wb,
-      sheet = sheet,
-      style = style4,
-      data_start_row = data_start_row,
-      nrow_x = nrow_x
-    )
-  }
-
-  if (!is.null(style5)) {
-    apply_row_style(
-      data = x,
-      wb = wb,
-      sheet = sheet,
-      style = style5,
-      data_start_row = data_start_row,
-      nrow_x = nrow_x
-    )
-  }
-
-  if (!is.null(style6)) {
-    apply_row_style(
-      data = x,
-      wb = wb,
-      sheet = sheet,
-      style = style6,
-      data_start_row = data_start_row,
-      nrow_x = nrow_x
-    )
-  }
-
-  if (!is.null(style7)) {
-    apply_row_style(
-      data = x,
-      wb = wb,
-      sheet = sheet,
-      style = style7,
-      data_start_row = data_start_row,
-      nrow_x = nrow_x
-    )
-  }
-
-    if (!is.null(style8)) {
-      apply_row_style(
-        data = x,
-        wb = wb,
-        sheet = sheet,
-        style = style8,
-        data_start_row = data_start_row,
-        nrow_x = nrow_x
-      )
-    }
-
-    if (!is.null(style9)) {
-      apply_row_style(
-        data = x,
-        wb = wb,
-        sheet = sheet,
-        style = style9,
-        data_start_row = data_start_row,
-        nrow_x = nrow_x
-      )
-    }
 
   if (has_group) {
 

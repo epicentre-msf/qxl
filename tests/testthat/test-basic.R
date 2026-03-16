@@ -53,25 +53,11 @@ test_that("basic functionality works as expected", {
   # test multiple styles
   wb <- qxl(
     mtcars_tbl,
-    style1 = qstyle(
-      mpg > 20,
-      cols = mpg,
-      bgFill = "#fddbc7"
-    ),
-    style2 = qstyle(
-      disp > 300,
-      cols = disp,
-      bgFill = "#fddbc7"
-    ),
-    style3 = qstyle(
-      drat > 3.2,
-      cols = drat,
-      bgFill = "#fddbc7"
-    ),
-    style4 = qstyle(
-      wt > 3,
-      cols = wt,
-      bgFill = "#fddbc7"
+    style = list(
+      qstyle(mpg > 20,   cols = mpg,  bgFill = "#fddbc7"),
+      qstyle(disp > 300, cols = disp, bgFill = "#fddbc7"),
+      qstyle(drat > 3.2, cols = drat, bgFill = "#fddbc7"),
+      qstyle(wt > 3,     cols = wt,   bgFill = "#fddbc7")
     )
   )
 

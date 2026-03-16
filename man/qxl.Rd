@@ -12,6 +12,7 @@ qxl(
   header = NULL,
   style_head = qstyle(rows = 1, textDecoration = "bold"),
   hide_subhead = TRUE,
+  style = NULL,
   style1 = NULL,
   style2 = NULL,
   style3 = NULL,
@@ -74,7 +75,14 @@ hidden second row.
 \item{hide_subhead}{Logical indicating whether to hide the subheader (if
 present). Defaults to TRUE.}
 
-\item{style1, style2, style3, style4, style5, style6, style7, style8, style9}{Optional style to set using \code{\link[=qstyle]{qstyle()}}}
+\item{style}{Optional style, or list of styles, set using \code{\link[=qstyle]{qstyle()}}.
+Accepts any number of \code{\link[=qstyle]{qstyle()}} objects:
+
+\if{html}{\out{<div class="sourceCode">}}\preformatted{style = qstyle(halign = "center")
+style = list(qstyle(halign = "center"), qstyle(rows = cyl > 4, bgFill = "#fddbc7"))
+}\if{html}{\out{</div>}}}
+
+\item{style1, style2, style3, style4, style5, style6, style7, style8, style9}{\ifelse{html}{\href{https://lifecycle.r-lib.org/articles/stages.html#deprecated}{\figure{lifecycle-deprecated.svg}{options: alt='[Deprecated]'}}}{\strong{[Deprecated]}} Use \code{style} instead.}
 
 \item{group}{Optional vector of one or more column names used to create
 alternating groupings of rows, with every other row grouping styled as per

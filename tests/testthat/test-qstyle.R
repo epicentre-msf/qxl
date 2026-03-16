@@ -22,7 +22,7 @@ test_that("qstyle works as expected", {
   #  data rows (2:9)
   wb <- qxl(
     dat,
-    style1 = qstyle(rows = x1 >= 4 & x2 == "f", bgFill = "#fddbc7")
+    style = qstyle(rows = x1 >= 4 & x2 == "f", bgFill = "#fddbc7")
   )
 
   expect_equal(
@@ -31,6 +31,6 @@ test_that("qstyle works as expected", {
   )
 
   # test style applied to data.frame with 0 rows (issue #1)
-  expect_silent(qxl(dat[0,], style1 = qstyle(bgFill = "#fddbc7")))
+  expect_silent(qxl(dat[0,], style = qstyle(bgFill = "#fddbc7")))
 
 })
