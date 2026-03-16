@@ -14,7 +14,7 @@
 #' expr_to_excel(cyl > 4, mtcars)
 #' expr_to_excel(cyl > 4 & hp < 200, mtcars)
 #'
-#' @importFrom rlang `!!`
+#' @importFrom rlang `!!` enexpr
 #' @export expr_to_excel
 expr_to_excel <- function(x, data, row_start = 2L) {
 
@@ -22,7 +22,7 @@ expr_to_excel <- function(x, data, row_start = 2L) {
   if (is_quo(x)) {
     x <- rlang::quo_get_expr(x)
   } else {
-    x <- str2lang(deparse(substitute(x), width.cutoff = 500))
+    x <- rlang::enexpr(x)
   }
 
   # translate to Excel

@@ -1,7 +1,6 @@
 context("expr_to_excel")
 
 test_that("expr_to_excel works as expected", {
-
   # data for testing
   dat <- data.frame(
     x1 = 1:6,
@@ -30,5 +29,12 @@ test_that("expr_to_excel works as expected", {
     expr_to_excel(x1 == 4, dat, row_start = 3),
     "$A3 == 4"
   )
-})
 
+  # test that bare expression passed via enexpr (non-quosure path) gives the
+  # same result as the equivalent quosure path
+  q <- rlang::quo(x1 == 4)
+  expect_equal(
+    expr_to_excel(x1 == 4, dat),
+    expr_to_excel(q, dat)
+  )
+})
