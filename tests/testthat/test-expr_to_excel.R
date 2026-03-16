@@ -37,4 +37,20 @@ test_that("expr_to_excel works as expected", {
     expr_to_excel(x1 == 4, dat),
     expr_to_excel(q, dat)
   )
+
+  # test that back-ticked column names are handled correctly
+  x <- dplyr::tibble(
+    x1 = 1:5,
+    `11-1` = 1:5
+  )
+
+  file_write <- tempfile(fileext = ".xlsx")
+
+  qxl::qxl(
+    x,
+    file = file_write,
+    style = qstyle(rows = !is.na(.x), fontSize = 15, cols = 2)
+  )
+
+  expect_true(file.exists(file_write))
 })

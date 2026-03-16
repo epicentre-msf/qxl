@@ -77,7 +77,7 @@ expr_to_excel_helper <- function(x, cols, row_start) {
   vars <- intersect(all.vars(x), cols)
 
   for (var_focal in vars) {
-    var_i <- which(as.character(x) %in% var_focal)
+    var_i <- which(vapply(as.list(x), function(el) is.symbol(el) && as.character(el) == var_focal, logical(1L)))
     col_i <- which(cols %in% var_focal)
     var_replace <- str2lang(paste0(COLS_EXCEL[col_i], suffix))
     if (length(x) == 1) {

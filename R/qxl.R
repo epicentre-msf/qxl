@@ -798,7 +798,7 @@ apply_row_style <- function(data,
       for (j in cols_dotx) {
         cond_j <- do.call(
           "substitute",
-          list(cond, list(.x = str2lang(j)))
+          list(cond, list(.x = as.name(j)))
         )
         cond_excel_j <- expr_to_excel(
           rlang::enquo(cond_j),
