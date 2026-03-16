@@ -2,6 +2,7 @@
 ^\.Rproj\.user$
 ^archive$
 ^data-raw$
+^draft$
 ^README\.Rmd$
 ^LICENSE\.md$
 ^\.github$
