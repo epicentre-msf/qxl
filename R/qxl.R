@@ -143,45 +143,44 @@
 #' qxl(mtcars, file = tempfile(fileext = ".xlsx"))
 #'
 #' @export qxl
-qxl <- function(x,
-                file = NULL,
-                wb = openxlsx::createWorkbook(),
-                sheet = NULL,
-                header = NULL,
-                style_head = qstyle(rows = 1, textDecoration = "bold"),
-                hide_subhead = TRUE,
-                style = NULL,
-                style1 = NULL,
-                style2 = NULL,
-                style3 = NULL,
-                style4 = NULL,
-                style5 = NULL,
-                style6 = NULL,
-                style7 = NULL,
-                style8 = NULL,
-                style9 = NULL,
-                group,
-                group_style = qstyle(bgFill = "#ffcccb"),
-                group_border = TRUE,
-                row_heights = NULL,
-                col_widths = "auto",
-                cols_hide = NULL,
-                freeze_row = 1L,
-                freeze_col = NULL,
-                protect,
-                validate = NULL,
-                validate_cond = NULL,
-                validate_cond_all = NULL,
-                filter = FALSE,
-                filter_cols = everything(),
-                zoom = 120L,
-                date_format = "yyyy-mm-dd",
-                overwrite = TRUE) {
-
-
+qxl <- function(
+  x,
+  file = NULL,
+  wb = openxlsx::createWorkbook(),
+  sheet = NULL,
+  header = NULL,
+  style_head = qstyle(rows = 1, textDecoration = "bold"),
+  hide_subhead = TRUE,
+  style = NULL,
+  style1 = NULL,
+  style2 = NULL,
+  style3 = NULL,
+  style4 = NULL,
+  style5 = NULL,
+  style6 = NULL,
+  style7 = NULL,
+  style8 = NULL,
+  style9 = NULL,
+  group,
+  group_style = qstyle(bgFill = "#ffcccb"),
+  group_border = TRUE,
+  row_heights = NULL,
+  col_widths = "auto",
+  cols_hide = NULL,
+  freeze_row = 1L,
+  freeze_col = NULL,
+  protect,
+  validate = NULL,
+  validate_cond = NULL,
+  validate_cond_all = NULL,
+  filter = FALSE,
+  filter_cols = everything(),
+  zoom = 120L,
+  date_format = "yyyy-mm-dd",
+  overwrite = TRUE
+) {
   # handle deprecated style1-style9 args
-  deprecated_styles <- list(style1, style2, style3, style4, style5,
-                             style6, style7, style8, style9)
+  deprecated_styles <- list(style1, style2, style3, style4, style5, style6, style7, style8, style9)
   deprecated_styles <- Filter(Negate(is.null), deprecated_styles)
 
   if (length(deprecated_styles) > 0) {
@@ -193,8 +192,7 @@ qxl <- function(x,
     if (is.null(style)) {
       style <- deprecated_styles
     } else {
-      style <- c(if (inherits(style, "qstyle")) list(style) else style,
-                 deprecated_styles)
+      style <- c(if (inherits(style, "qstyle")) list(style) else style, deprecated_styles)
     }
   }
 
@@ -204,7 +202,9 @@ qxl <- function(x,
   }
 
   # convert x to list if single data frame
-  if (is.data.frame(x)) { x <- list(x) }
+  if (is.data.frame(x)) {
+    x <- list(x)
+  }
 
   # prepare sheet names
   if (is.null(sheet)) {
@@ -307,7 +307,6 @@ qxl <- function(x,
 }
 
 
-
 #' @noRd
 #' @import openxlsx
 #' @importFrom stats setNames
@@ -317,38 +316,37 @@ qxl <- function(x,
 #'   distinct
 #' @importFrom rlang enquo quo_get_expr .data .env `!!`
 #'
-qxl_ <- function(x,
-                 file = NULL,
-                 wb = openxlsx::createWorkbook(),
-                 sheet = "Sheet1",
-                 header = names(x),
-                 style_head = qstyle(rows = 1, textDecoration = "bold"),
-                 hide_subhead = TRUE,
-                 style = NULL,
-                 group,
-                 group_style = qstyle(bgFill = "#ffcccb"),
-                 group_border = TRUE,
-                 row_heights = NULL,
-                 col_widths = "auto",
-                 cols_hide = NULL,
-                 freeze_row = 1L,
-                 freeze_col = NULL,
-                 protect,
-                 validate = NULL,
-                 validate_cond = NULL,
-                 validate_cond_all = NULL,
-                 filter = FALSE,
-                 filter_cols = everything(),
-                 zoom = 120L,
-                 date_format = "yyyy-mm-dd",
-                 overwrite = TRUE) {
-
-
+qxl_ <- function(
+  x,
+  file = NULL,
+  wb = openxlsx::createWorkbook(),
+  sheet = "Sheet1",
+  header = names(x),
+  style_head = qstyle(rows = 1, textDecoration = "bold"),
+  hide_subhead = TRUE,
+  style = NULL,
+  group,
+  group_style = qstyle(bgFill = "#ffcccb"),
+  group_border = TRUE,
+  row_heights = NULL,
+  col_widths = "auto",
+  cols_hide = NULL,
+  freeze_row = 1L,
+  freeze_col = NULL,
+  protect,
+  validate = NULL,
+  validate_cond = NULL,
+  validate_cond_all = NULL,
+  filter = FALSE,
+  filter_cols = everything(),
+  zoom = 120L,
+  date_format = "yyyy-mm-dd",
+  overwrite = TRUE
+) {
   ### grouping -----------------------------------------------------------------
   has_group <- !missing(group)
 
   if (has_group) {
-
     x <- x %>%
       arrange(across(all_of(group))) %>%
       group_by(across(all_of(group))) %>%
@@ -358,14 +356,12 @@ qxl_ <- function(x,
     header <- if (!is.null(names(header))) c("g" = "Grouping", header) else c("g", header)
   }
 
-
   ### initialize ---------------------------------------------------------------
   options("openxlsx.dateFormat" = date_format)
   wb <- openxlsx::copyWorkbook(wb) # to avoid overwriting global env
   openxlsx::addWorksheet(wb, sheet, zoom = zoom)
 
   if (!is.null(names(header))) {
-
     data_start_row <- 3L
 
     openxlsx::writeData(
@@ -376,7 +372,8 @@ qxl_ <- function(x,
     )
 
     if (hide_subhead) {
-      suppressWarnings( # bug in openxlsx generates unnecessary warning
+      suppressWarnings(
+        # bug in openxlsx generates unnecessary warning
         openxlsx::groupRows(
           wb,
           sheet,
@@ -393,9 +390,7 @@ qxl_ <- function(x,
       cols = seq_len(ncol(x)),
       style = openxlsx::createStyle(textDecoration = "bold", halign = "left")
     )
-
   } else {
-
     data_start_row <- 2L
 
     openxlsx::writeData(
@@ -417,7 +412,6 @@ qxl_ <- function(x,
   nrow_x <- nrow(x) + data_start_row - 1L # number of rows in Excel, incl. header
   ncol_x <- ncol(x)
 
-
   ### row height and col widths ------------------------------------------------
   if (!is.null(row_heights)) {
     openxlsx::setRowHeights(wb, sheet, rows = 1:nrow_x, heights = row_heights)
@@ -425,7 +419,6 @@ qxl_ <- function(x,
 
   if (!is.null(col_widths)) {
     if (!is.null(names(col_widths))) {
-
       names_extra <- setdiff(names(col_widths), c(names(x), ".default"))
 
       if (length(names_extra) > 0) {
@@ -461,8 +454,12 @@ qxl_ <- function(x,
   }
 
   ### freeze panes -------------------------------------------------------------
-  if (is.null(freeze_row)) freeze_row <- 0L
-  if (is.null(freeze_col)) freeze_col <- 0L
+  if (is.null(freeze_row)) {
+    freeze_row <- 0L
+  }
+  if (is.null(freeze_col)) {
+    freeze_col <- 0L
+  }
 
   openxlsx::freezePane(
     wb,
@@ -471,10 +468,8 @@ qxl_ <- function(x,
     firstActiveCol = freeze_col + 1L
   )
 
-
   ### protection ---------------------------------------------------------------
   if (!missing(protect)) {
-
     # protect
     protect_args <- c(
       wb = wb,
@@ -509,13 +504,11 @@ qxl_ <- function(x,
     }
   }
 
-
   ### filter -------------------------------------------------------------------
   if (filter) {
     cols_filter <- col_selection(x, rlang::enquo(filter_cols))
     openxlsx::addFilter(wb, sheet, rows = 1, cols = cols_filter)
   }
-
 
   ### row styles ---------------------------------------------------------------
   if (!is.null(style_head)) {
@@ -541,7 +534,6 @@ qxl_ <- function(x,
   }
 
   if (has_group) {
-
     openxlsx::conditionalFormatting(
       wb = wb,
       sheet = sheet,
@@ -561,7 +553,6 @@ qxl_ <- function(x,
     )
 
     if (group_border) {
-
       df_borders <- x %>%
         mutate(temp__rowid__ = 1:n()) %>%
         group_by(across(all_of(group))) %>%
@@ -579,10 +570,8 @@ qxl_ <- function(x,
     }
   }
 
-
   ### validation ---------------------------------------------------------------
   if (!is.null(validate)) {
-
     if (is.data.frame(validate)) {
       validate_df <- validate
     } else {
@@ -598,14 +587,14 @@ qxl_ <- function(x,
     }
 
     openxlsx::writeData(
-      wb, "valid_options",
+      wb,
+      "valid_options",
       x = validate_df,
       startRow = valid_start,
       colNames = FALSE
     )
 
     for (j in unique(validate_df[[1]])) {
-
       i_rng <- range(which(validate_df[[1]] %in% j)) + valid_start - 1L
       excel_range <- paste0("'valid_options'!", "$B$", i_rng[1], ":", "$B$", i_rng[2])
 
@@ -625,10 +614,8 @@ qxl_ <- function(x,
     }
   }
 
-
   ### conditional validation ---------------------------------------------------
   if (!is.null(validate_cond)) {
-
     if (is.data.frame(validate_cond)) {
       validate_cond_df <- validate_cond
     } else {
@@ -642,8 +629,7 @@ qxl_ <- function(x,
     cols_cond <- setdiff(names(validate_cond_df), col_validation)
 
     if (!is.null(validate_cond_all)) {
-
-      validate_cond_all_df <- unique(x[,cols_cond, drop = FALSE]) %>%
+      validate_cond_all_df <- unique(x[, cols_cond, drop = FALSE]) %>%
         mutate(replacement = list(validate_cond_all)) %>%
         tidyr::unnest("replacement") %>%
         stats::setNames(c(cols_cond, col_validation))
@@ -670,7 +656,8 @@ qxl_ <- function(x,
     }
 
     openxlsx::writeData(
-      wb, "valid_options_cond",
+      wb,
+      "valid_options_cond",
       x = validate_cond_df,
       startRow = valid_cond_start,
       colNames = FALSE
@@ -701,7 +688,6 @@ qxl_ <- function(x,
       )
 
     for (i in seq_len(nrow(x))) {
-
       if (!is.na(x_validate$range_min[i]) & !is.na(x_validate$range_max[i])) {
         suppressWarnings(
           openxlsx::dataValidation(
@@ -740,99 +726,60 @@ list_to_df <- function(x) {
 
 
 #' @noRd
-#' @importFrom rlang eval_tidy
-apply_row_style <- function(data,
-                            wb,
-                            sheet,
-                            style,
-                            data_start_row,
-                            nrow_x) {
-
-  cols_style <- col_selection(data, style$cols)
-
-  if (is_quo_numeric(style$rows)) {
-    # row-specific formatting (non-conditional)
-    openxlsx::addStyle(
-      wb,
-      sheet,
-      style = style$style,
-      rows = rlang::eval_tidy(style$rows),
-      cols = cols_style,
-      gridExpand = TRUE,
-      stack = TRUE
-    )
-  } else if (is_quo_character(style$rows)) {
-    # character keyword 'data' or 'all'
-    rows_chr <- rlang::eval_tidy(style$rows)
-    if (rows_chr == "data") {
-      if (nrow_x >= data_start_row) {
-        rows_int <- seq(data_start_row, nrow_x, by = 1L)
-      } else {
-        rows_int <- NULL
-      }
-    } else if (rows_chr == "all") (
-      rows_int <- seq(1L, nrow_x, by = 1L)
-    )
-
-    openxlsx::addStyle(
-      wb,
-      sheet,
-      style = style$style,
-      rows = rows_int,
-      cols = cols_style,
-      gridExpand = TRUE,
-      stack = TRUE
-    )
-
+resolve_style_rows <- function(rows_quo, data_start_row, nrow_x) {
+  if (is_quo_numeric(rows_quo)) {
+    return(rlang::eval_tidy(rows_quo))
+  }
+  rows_chr <- rlang::eval_tidy(rows_quo)
+  if (rows_chr == "data") {
+    if (nrow_x >= data_start_row) seq(data_start_row, nrow_x) else NULL
   } else {
-
-    # extract expression
-    cond <- rlang::quo_get_expr(style$rows)
-
-    # conditional formatting
-    has_dotx <- ".x" %in% all.vars(cond)
-
-    if (has_dotx) {
-      # conditional formatting with .x-selector
-      cols_dotx <- col_selection(data, style$cols, index = FALSE)
-      for (j in cols_dotx) {
-        cond_j <- do.call(
-          "substitute",
-          list(cond, list(.x = as.name(j)))
-        )
-        cond_excel_j <- expr_to_excel(
-          rlang::enquo(cond_j),
-          data,
-          row_start = data_start_row
-        )
-        openxlsx::conditionalFormatting(
-          wb,
-          sheet,
-          cols = which(names(data) %in% j),
-          rows = data_start_row:nrow_x,
-          rule = cond_excel_j,
-          style = style$style
-        )
-      }
-    } else {
-      # conditional formatting, no .x-selector
-      rule <- expr_to_excel(
-        style$rows, # already enquo
-        data,
-        row_start = data_start_row
-      )
-      for (j in cols_style) {
-        openxlsx::conditionalFormatting(
-          wb,
-          sheet,
-          cols = j,
-          rows = data_start_row:nrow_x,
-          rule = rule,
-          style = style$style
-        )
-      }
-    }
+    seq(1L, nrow_x) # "all"
   }
 }
 
 
+#' @noRd
+#' @importFrom rlang eval_tidy
+apply_row_style <- function(data, wb, sheet, style, data_start_row, nrow_x) {
+  cols_style <- col_selection(data, style$cols)
+
+  # static row range: numeric indices or keyword ("data" / "all")
+  if (is_quo_numeric(style$rows) || is_quo_character(style$rows)) {
+    rows_int <- resolve_style_rows(style$rows, data_start_row, nrow_x)
+    if (!is.null(rows_int)) {
+      openxlsx::addStyle(
+        wb,
+        sheet,
+        style = style$style,
+        rows = rows_int,
+        cols = cols_style,
+        gridExpand = TRUE,
+        stack = TRUE
+      )
+    }
+    return(invisible(NULL))
+  }
+
+  # conditional formatting (expression rows)
+  cond <- rlang::quo_get_expr(style$rows)
+  has_dotx <- ".x" %in% all.vars(cond)
+  cols_named <- col_selection(data, style$cols, index = FALSE)
+
+  for (j in cols_named) {
+    cond_j <- if (has_dotx) {
+      do.call("substitute", list(cond, list(.x = as.name(j))))
+    } else {
+      cond
+    }
+    rule <- expr_to_excel(rlang::enquo(cond_j), data, row_start = data_start_row)
+    openxlsx::conditionalFormatting(
+      wb,
+      sheet,
+      cols = which(names(data) == j),
+      rows = data_start_row:nrow_x,
+      rule = rule,
+      style = style$style
+    )
+  }
+}
