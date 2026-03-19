@@ -55,17 +55,20 @@ test_that("validate_cascade works as expected", {
 
   named_regions <- openxlsx::getNamedRegions(wb)
 
-  # level 2 named ranges: keyed by adm1 only
-  expect_true(all(c("Ontario", "Quebec") %in% named_regions))
+  # level 2 named ranges: opaque casc_N ids (split() sorts alphabetically:
+  # Ontario=col2, Quebec=col3)
+  expect_true(all(c("casc_2", "casc_3") %in% named_regions))
 
-  # level 3 named ranges: keyed by compound adm1__adm2 key to avoid collisions
-  expect_true(all(
-    c("Ontario__Toronto", "Ontario__Ottawa", "Quebec__Quebec_City", "Quebec__Montreal") %in%
+  # level 3 named ranges: lookup table occupies cols 4-5, so lvl3 groups start
+  # at col 6 (split() order: Ontario__Ottawa, Ontario__Toronto,
+  # Quebec__Montreal, Quebec__Quebec City)
+  expect_true(all(c("casc_6", "casc_7", "casc_8", "casc_9") %in% named_regions))
+
+  # no human-readable or sanitized names should appear
+  expect_false(any(
+    c("Ontario", "Quebec", "Ontario__Toronto", "Ontario__Ottawa", "Quebec__Quebec_City", "Quebec__Montreal") %in%
       named_regions
   ))
-
-  # simple adm2 names must NOT appear as standalone ranges at level 3
-  expect_false(any(c("Toronto", "Ottawa", "Quebec_City", "Montreal") %in% named_regions))
 
   # three data validations written to the main sheet (one per cascade column)
   sheet_idx <- which(wb$sheet_names == "Sheet1")
@@ -76,9 +79,11 @@ test_that("validate_cascade works as expected", {
   expect_true(grepl("valid_options_cascade", dvs[[1]]))
   expect_false(grepl("INDIRECT", dvs[[1]]))
 
-  # levels 2 and 3 use INDIRECT with SUBSTITUTE for space handling
-  expect_true(grepl("INDIRECT.*SUBSTITUTE", dvs[[2]]))
-  expect_true(grepl("INDIRECT.*SUBSTITUTE", dvs[[3]]))
+  # levels 2 and 3 use INDIRECT with MATCH+INDEX lookup (not SUBSTITUTE)
+  expect_true(grepl("INDIRECT.*INDEX.*MATCH", dvs[[2]]))
+  expect_true(grepl("INDIRECT.*INDEX.*MATCH", dvs[[3]]))
+  expect_false(grepl("SUBSTITUTE", dvs[[2]]))
+  expect_false(grepl("SUBSTITUTE", dvs[[3]]))
 
   # level 2 formula references only adm1 (col A)
   expect_true(grepl("\\$A", dvs[[2]]))
@@ -110,23 +115,22 @@ test_that("validate_cascade handles duplicate child values across parents", {
 
   named_regions <- openxlsx::getNamedRegions(wb)
 
-  # each state gets its own named range at level 2
-  expect_true(all(c("New_York", "California", "Florida") %in% named_regions))
+  # each state gets its own named range at level 2 (split() alphabetical order:
+  # California=col2, Florida=col3, New York=col4; lookup at cols 5-6)
+  expect_true(all(c("casc_2", "casc_3", "casc_4") %in% named_regions))
 
-  # each state+county combo gets its own named range at level 3
+  # each state+county combo gets its own named range at level 3 (split()
+  # alphabetical order: California__LA County=col7, California__Orange
+  # County=col8, Florida__Orange County=col9, New York__Albany County=col10,
+  # New York__Orange County=col11)
   expect_true(all(
-    c(
-      "New_York__Orange_County",
-      "New_York__Albany_County",
-      "California__Orange_County",
-      "California__LA_County",
-      "Florida__Orange_County"
-    ) %in%
-      named_regions
+    c("casc_7", "casc_8", "casc_9", "casc_10", "casc_11") %in% named_regions
   ))
 
-  # "Orange_County" must NOT appear as a standalone (collision) range
-  expect_false("Orange_County" %in% named_regions)
+  # no human-readable or sanitized names
+  expect_false(any(
+    c("Orange_County", "New_York", "California", "Florida") %in% named_regions
+  ))
 
   # each Orange County range contains only the cities for that state
   nr_df <- data.frame(
@@ -148,9 +152,9 @@ test_that("validate_cascade handles duplicate child values across parents", {
     ])
   }
 
-  ny_oc <- nr_df$pos[nr_df$name == "New_York__Orange_County"]
-  ca_oc <- nr_df$pos[nr_df$name == "California__Orange_County"]
-  fl_oc <- nr_df$pos[nr_df$name == "Florida__Orange_County"]
+  ca_oc <- nr_df$pos[nr_df$name == "casc_8"] # California__Orange County
+  fl_oc <- nr_df$pos[nr_df$name == "casc_9"] # Florida__Orange County
+  ny_oc <- nr_df$pos[nr_df$name == "casc_11"] # New York__Orange County
 
   expect_equal(read_range(wb, casc_sheet_idx, ny_oc), "Newburgh")
   expect_equal(read_range(wb, casc_sheet_idx, ca_oc), "Anaheim")
@@ -181,13 +185,72 @@ test_that("validate_cascade input validation catches bad args", {
 })
 
 
-test_that("sanitize_range_name handles edge cases", {
-  expect_equal(sanitize_range_name("Quebec City"), "Quebec_City")
-  expect_equal(sanitize_range_name("foo bar baz"), "foo_bar_baz")
+test_that("validate_cascade works correctly with non-ASCII (Arabic) values", {
+  # values that differ only in Arabic characters must not collide, and the
+  # dropdowns must resolve correctly despite the non-ASCII text
+  cascade <- data.frame(
+    country = c("Egypt", "Egypt", "Egypt"),
+    city = c(
+      "Cairo \u0627\u0644\u0642\u0627\u0647\u0631\u0629",
+      "Alexandria \u0627\u0644\u0625\u0633\u0643\u0646\u062f\u0631\u064a\u0629",
+      "Giza \u0627\u0644\u062c\u064a\u0632\u0629"
+    ),
+    district = c("district1", "district2", "district3"),
+    stringsAsFactors = FALSE
+  )
 
-  # special chars stripped
-  expect_equal(sanitize_range_name("foo!@#bar"), "foobar")
+  df <- data.frame(
+    country = "Egypt",
+    city = NA_character_,
+    district = NA_character_,
+    stringsAsFactors = FALSE
+  )
 
-  # leading digit gets underscore prefix
-  expect_equal(sanitize_range_name("1abc"), "_1abc")
+  wb <- qxl(df, validate_cascade = cascade)
+
+  named_regions <- openxlsx::getNamedRegions(wb)
+
+  # level 2: one group (all cities under Egypt) at col 2; lookup at cols 3-4
+  expect_true("casc_2" %in% named_regions)
+
+  # level 3: three distinct groups at cols 5-7 (split() alphabetical order:
+  # Egypt__Alexandria..., Egypt__Cairo..., Egypt__Giza...)
+  expect_true(all(c("casc_5", "casc_6", "casc_7") %in% named_regions))
+
+  # exactly 4 casc_N ranges total (1 lvl2 + 3 lvl3), no spurious extras from
+  # collision/stripping
+  casc_names <- grep("^casc_", named_regions, value = TRUE)
+  expect_length(casc_names, 4L)
+
+  # formula uses MATCH+INDEX, not SUBSTITUTE
+  sheet_idx <- which(wb$sheet_names == "Sheet1")
+  dvs <- wb$worksheets[[sheet_idx]]$dataValidationsLst
+  expect_false(grepl("SUBSTITUTE", dvs[[3]]))
+  expect_true(grepl("INDIRECT.*INDEX.*MATCH", dvs[[3]]))
 })
+
+
+if (FALSE) {
+  # test performance with larger dataset
+  geo_nga <- obtdata::fetch_georef("HTI")$ref
+
+  cascade <- geo_nga |>
+    dplyr::filter(level == 4) |>
+    distinct(adm1_name, adm2_name, adm3_name, adm4_name) |>
+    arrange(adm1_name, adm2_name, adm3_name, adm4_name)
+
+  df <- data.frame(
+    id = 1:10,
+    adm1_name = c("Sud", rep(NA, 9)),
+    adm2_name = NA_character_,
+    adm3_name = NA_character_,
+    adm4_name = NA_character_,
+    stringsAsFactors = FALSE
+  )
+
+  qxl::qxl(
+    df,
+    "~/desktop/test_cascade.xlsx",
+    validate_cascade = cascade
+  )
+}

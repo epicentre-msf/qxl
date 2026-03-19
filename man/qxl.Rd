@@ -178,9 +178,7 @@ level. For example:
 }\if{html}{\out{</div>}}
 
 Selecting "Ontario" in \code{adm1} will restrict the \code{adm2} dropdown to
-"Toronto" and "Ottawa". Requires that parent column values form valid Excel
-named range names after replacing spaces with underscores (other special
-characters are stripped automatically).}
+"Toronto" and "Ottawa".}
 
 \item{filter}{Logical indicating whether to add column filters.}
 

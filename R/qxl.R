@@ -121,9 +121,7 @@
 #'   )
 #'   ```
 #'   Selecting "Ontario" in `adm1` will restrict the `adm2` dropdown to
-#'   "Toronto" and "Ottawa". Requires that parent column values form valid Excel
-#'   named range names after replacing spaces with underscores (other special
-#'   characters are stripped automatically).
+#'   "Toronto" and "Ottawa".
 #' @param filter Logical indicating whether to add column filters.
 #' @param filter_cols Tidy-selection specifying which columns to filter. Only
 #'   used if `filter` is `TRUE`. Defaults to `everything()` to select all
@@ -796,12 +794,17 @@ qxl_ <- function(
       ancestor_keys <- apply(
         validate_cascade[seq_len(i - 1L)],
         1L,
-        paste, collapse = "__"
+        paste,
+        collapse = "__"
       )
       groups <- lapply(split(validate_cascade[[child_col]], ancestor_keys), unique)
 
+      lookup_keys <- character(0L)
+      lookup_ids <- character(0L)
+
       for (key in names(groups)) {
         child_vals <- groups[[key]]
+        range_name <- paste0("casc_", next_col)
         openxlsx::writeData(
           wb,
           casc_sheet,
@@ -815,20 +818,60 @@ qxl_ <- function(
           casc_sheet,
           cols = next_col,
           rows = seq_along(child_vals),
-          name = sanitize_range_name(key),
+          name = range_name,
           overwrite = TRUE
         )
+        lookup_keys <- c(lookup_keys, key)
+        lookup_ids <- c(lookup_ids, range_name)
         next_col <- next_col + 1L
       }
 
-      # INDIRECT formula concatenates all ancestor cell references
+      # write lookup table: keys column + ids column
+      key_col_idx <- next_col
+      id_col_idx <- next_col + 1L
+      n_groups <- length(lookup_keys)
+      openxlsx::writeData(
+        wb,
+        casc_sheet,
+        x = data.frame(v = lookup_keys),
+        startCol = key_col_idx,
+        startRow = 1L,
+        colNames = FALSE
+      )
+      openxlsx::writeData(
+        wb,
+        casc_sheet,
+        x = data.frame(v = lookup_ids),
+        startCol = id_col_idx,
+        startRow = 1L,
+        colNames = FALSE
+      )
+      next_col <- next_col + 2L
+
+      # INDIRECT formula: MATCH the ancestor key against the lookup table, then
+      # INDEX the corresponding range name and INDIRECT into it. This avoids any
+      # text transformation of cell values, so Unicode characters are handled
+      # correctly.
       ancestor_letters <- COLS_EXCEL[which(names(x) %in% casc_cols[seq_len(i - 1L)])]
-      # Use CONCATENATE rather than & to avoid XML-escaping issues with &
-      subs_terms <- sprintf('SUBSTITUTE($%s%d," ","_")', ancestor_letters, data_start_row)
-      indirect_formula <- paste0(
-        "INDIRECT(CONCATENATE(",
-        paste(subs_terms, collapse = ',"__",'),
-        "))"
+      key_col_letter <- COLS_EXCEL[key_col_idx]
+      id_col_letter <- COLS_EXCEL[id_col_idx]
+
+      if (length(ancestor_letters) == 1L) {
+        key_expr <- sprintf("$%s%d", ancestor_letters, data_start_row)
+      } else {
+        parts <- sprintf("$%s%d", ancestor_letters, data_start_row)
+        key_expr <- paste0("CONCATENATE(", paste(parts, collapse = ',"__",'), ")")
+      }
+
+      indirect_formula <- sprintf(
+        "INDIRECT(INDEX('valid_options_cascade'!$%s$1:$%s$%d,MATCH(%s,'valid_options_cascade'!$%s$1:$%s$%d,0)))",
+        id_col_letter,
+        id_col_letter,
+        n_groups,
+        key_expr,
+        key_col_letter,
+        key_col_letter,
+        n_groups
       )
       suppressWarnings(
         openxlsx::dataValidation(
@@ -862,14 +905,6 @@ list_to_df <- function(x) {
     x2 = as.character(unlist(x)),
     stringsAsFactors = FALSE
   )
-}
-
-
-#' @noRd
-sanitize_range_name <- function(x) {
-  out <- gsub(" ", "_", x)
-  out <- gsub("[^A-Za-z0-9_.]", "", out)
-  ifelse(grepl("^[^A-Za-z_]", out), paste0("_", out), out)
 }
 
 
