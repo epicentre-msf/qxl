@@ -109,6 +109,21 @@
 #'   will not update in real time if those values are later changed.
 #' @param validate_cond_all Optional vector of value(s) to always allow,
 #'   independent of the value in the conditional column (e.g. "Unknown").
+#' @param validate_cascade Optional data frame specifying cascading dropdown
+#'   validation. Each column defines one level of the cascade, and all column
+#'   names must match columns in `x`. Each level's dropdown options are
+#'   dynamically filtered in Excel based on the value selected in the previous
+#'   level. For example:
+#'   ```
+#'   data.frame(
+#'     adm1 = c("Ontario", "Ontario", "Quebec", "Quebec"),
+#'     adm2 = c("Toronto", "Ottawa",  "Montreal", "Quebec City")
+#'   )
+#'   ```
+#'   Selecting "Ontario" in `adm1` will restrict the `adm2` dropdown to
+#'   "Toronto" and "Ottawa". Requires that parent column values form valid Excel
+#'   named range names after replacing spaces with underscores (other special
+#'   characters are stripped automatically).
 #' @param filter Logical indicating whether to add column filters.
 #' @param filter_cols Tidy-selection specifying which columns to filter. Only
 #'   used if `filter` is `TRUE`. Defaults to `everything()` to select all
@@ -173,6 +188,7 @@ qxl <- function(
   validate = NULL,
   validate_cond = NULL,
   validate_cond_all = NULL,
+  validate_cascade = NULL,
   filter = FALSE,
   filter_cols = everything(),
   zoom = 120L,
@@ -263,6 +279,7 @@ qxl <- function(
     validate = validate,
     validate_cond = validate_cond,
     validate_cond_all = validate_cond_all,
+    validate_cascade = validate_cascade,
     filter = filter,
     filter_cols = filter_cols,
     zoom = zoom,
@@ -291,6 +308,7 @@ qxl <- function(
       validate = validate,
       validate_cond = validate_cond,
       validate_cond_all = validate_cond_all,
+      validate_cascade = validate_cascade,
       filter = filter,
       filter_cols = filter_cols,
       zoom = zoom,
@@ -337,6 +355,7 @@ qxl_ <- function(
   validate = NULL,
   validate_cond = NULL,
   validate_cond_all = NULL,
+  validate_cascade = NULL,
   filter = FALSE,
   filter_cols = everything(),
   zoom = 120L,
@@ -706,6 +725,127 @@ qxl_ <- function(
     }
   }
 
+  ### cascade validation -------------------------------------------------------
+  if (!is.null(validate_cascade)) {
+    if (!is.data.frame(validate_cascade)) {
+      stop("`validate_cascade` must be a data frame", call. = FALSE)
+    }
+    if (ncol(validate_cascade) < 2L) {
+      stop("`validate_cascade` must have at least 2 columns", call. = FALSE)
+    }
+    if (!all(names(validate_cascade) %in% names(x))) {
+      stop(
+        "All column names in `validate_cascade` must also be column names in `x`",
+        call. = FALSE
+      )
+    }
+
+    casc_sheet <- "valid_options_cascade"
+
+    if (casc_sheet %in% wb$sheet_names) {
+      casc_existing <- openxlsx::readWorkbook(wb, casc_sheet, colNames = FALSE)
+      next_col <- ncol(casc_existing) + 1L
+    } else {
+      next_col <- 1L
+      openxlsx::addWorksheet(wb, casc_sheet, visible = FALSE)
+    }
+
+    casc_cols <- names(validate_cascade)
+
+    # level 1: plain list of unique first-column values
+    lvl1_vals <- unique(validate_cascade[[1L]])
+    lvl1_col <- next_col
+    openxlsx::writeData(
+      wb,
+      casc_sheet,
+      x = data.frame(v = lvl1_vals),
+      startCol = lvl1_col,
+      startRow = 1L,
+      colNames = FALSE
+    )
+    next_col <- next_col + 1L
+
+    suppressWarnings(
+      openxlsx::dataValidation(
+        wb,
+        sheet,
+        cols = which(names(x) == casc_cols[1L]),
+        rows = data_start_row:nrow_x,
+        type = "list",
+        value = paste0(
+          "'",
+          casc_sheet,
+          "'!$",
+          COLS_EXCEL[lvl1_col],
+          "$1:$",
+          COLS_EXCEL[lvl1_col],
+          "$",
+          length(lvl1_vals)
+        ),
+        allowBlank = TRUE,
+        showInputMsg = TRUE,
+        showErrorMsg = TRUE
+      )
+    )
+
+    # levels 2..n: one named range per ancestor-key, INDIRECT validation
+    for (i in seq(2L, ncol(validate_cascade))) {
+      child_col <- casc_cols[i]
+
+      # compound key from all ancestor columns (levels 1..i-1)
+      ancestor_keys <- apply(
+        validate_cascade[seq_len(i - 1L)],
+        1L,
+        paste, collapse = "__"
+      )
+      groups <- lapply(split(validate_cascade[[child_col]], ancestor_keys), unique)
+
+      for (key in names(groups)) {
+        child_vals <- groups[[key]]
+        openxlsx::writeData(
+          wb,
+          casc_sheet,
+          x = data.frame(v = child_vals),
+          startCol = next_col,
+          startRow = 1L,
+          colNames = FALSE
+        )
+        openxlsx::createNamedRegion(
+          wb,
+          casc_sheet,
+          cols = next_col,
+          rows = seq_along(child_vals),
+          name = sanitize_range_name(key),
+          overwrite = TRUE
+        )
+        next_col <- next_col + 1L
+      }
+
+      # INDIRECT formula concatenates all ancestor cell references
+      ancestor_letters <- COLS_EXCEL[which(names(x) %in% casc_cols[seq_len(i - 1L)])]
+      # Use CONCATENATE rather than & to avoid XML-escaping issues with &
+      subs_terms <- sprintf('SUBSTITUTE($%s%d," ","_")', ancestor_letters, data_start_row)
+      indirect_formula <- paste0(
+        "INDIRECT(CONCATENATE(",
+        paste(subs_terms, collapse = ',"__",'),
+        "))"
+      )
+      suppressWarnings(
+        openxlsx::dataValidation(
+          wb,
+          sheet,
+          cols = which(names(x) == child_col),
+          rows = data_start_row:nrow_x,
+          type = "list",
+          value = indirect_formula,
+          allowBlank = TRUE,
+          showInputMsg = TRUE,
+          showErrorMsg = TRUE
+        )
+      )
+    }
+  }
+
   ### return -------------------------------------------------------------------
   if (!is.null(file)) {
     qwrite(wb, file = file, overwrite = overwrite)
@@ -722,6 +862,14 @@ list_to_df <- function(x) {
     x2 = as.character(unlist(x)),
     stringsAsFactors = FALSE
   )
+}
+
+
+#' @noRd
+sanitize_range_name <- function(x) {
+  out <- gsub(" ", "_", x)
+  out <- gsub("[^A-Za-z0-9_.]", "", out)
+  ifelse(grepl("^[^A-Za-z_]", out), paste0("_", out), out)
 }
 
 

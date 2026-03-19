@@ -34,6 +34,7 @@ qxl(
   validate = NULL,
   validate_cond = NULL,
   validate_cond_all = NULL,
+  validate_cascade = NULL,
   filter = FALSE,
   filter_cols = everything(),
   zoom = 120L,
@@ -163,6 +164,23 @@ will not update in real time if those values are later changed.}
 
 \item{validate_cond_all}{Optional vector of value(s) to always allow,
 independent of the value in the conditional column (e.g. "Unknown").}
+
+\item{validate_cascade}{Optional data frame specifying cascading dropdown
+validation. Each column defines one level of the cascade, and all column
+names must match columns in \code{x}. Each level's dropdown options are
+dynamically filtered in Excel based on the value selected in the previous
+level. For example:
+
+\if{html}{\out{<div class="sourceCode">}}\preformatted{data.frame(
+  adm1 = c("Ontario", "Ontario", "Quebec", "Quebec"),
+  adm2 = c("Toronto", "Ottawa",  "Montreal", "Quebec City")
+)
+}\if{html}{\out{</div>}}
+
+Selecting "Ontario" in \code{adm1} will restrict the \code{adm2} dropdown to
+"Toronto" and "Ottawa". Requires that parent column values form valid Excel
+named range names after replacing spaces with underscores (other special
+characters are stripped automatically).}
 
 \item{filter}{Logical indicating whether to add column filters.}
 

@@ -1,5 +1,6 @@
 ^qxl\.Rproj$
 ^\.Rproj\.user$
+^\.claude$
 ^archive$
 ^data-raw$
 ^draft$
