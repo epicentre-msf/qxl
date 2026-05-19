@@ -725,33 +725,99 @@ qxl_ <- function(
 
   ### cascade validation -------------------------------------------------------
   if (!is.null(validate_cascade)) {
-    if (!is.data.frame(validate_cascade)) {
-      stop("`validate_cascade` must be a data frame", call. = FALSE)
-    }
-    if (ncol(validate_cascade) < 2L) {
-      stop("`validate_cascade` must have at least 2 columns", call. = FALSE)
-    }
-    if (!all(names(validate_cascade) %in% names(x))) {
-      stop(
-        "All column names in `validate_cascade` must also be column names in `x`",
-        call. = FALSE
-      )
-    }
+    wb <- write_cascade_validation(
+      wb = wb,
+      sheet = sheet,
+      x = x,
+      validate_cascade = validate_cascade,
+      data_start_row = data_start_row,
+      nrow_x = nrow_x
+    )
+  }
 
-    casc_sheet <- "valid_options_cascade"
+  ### return -------------------------------------------------------------------
+  if (!is.null(file)) {
+    qwrite(wb, file = file, overwrite = overwrite)
+  } else {
+    return(wb)
+  }
+}
 
-    if (casc_sheet %in% wb$sheet_names) {
-      casc_existing <- openxlsx::readWorkbook(wb, casc_sheet, colNames = FALSE)
-      next_col <- ncol(casc_existing) + 1L
-    } else {
-      next_col <- 1L
-      openxlsx::addWorksheet(wb, casc_sheet, visible = FALSE)
-    }
 
-    casc_cols <- names(validate_cascade)
+#' Write cascading dropdown validation to a workbook
+#'
+#' For each level of the cascade (column of `validate_cascade`), the dropdown
+#' source is a contiguous slice of a sorted (key, value) lookup table on a
+#' hidden sheet. The slice is located at validate-time via
+#' OFFSET(values, MATCH(key, keys, 0) - 1, 0, COUNTIF(keys, key), 1), where
+#' the key is built by concatenating the ancestor cells with "__" as separator.
+#'
+#' Long-format input is supported: a row contributes a value at level `i` only
+#' when columns 1..i are all non-NA. Rows with a "gap" (NA in column k followed
+#' by non-NA in a later column) trigger a warning and are dropped from levels
+#' deeper than the gap.
+#'
+#' @noRd
+write_cascade_validation <- function(
+  wb,
+  sheet,
+  x,
+  validate_cascade,
+  data_start_row,
+  nrow_x
+) {
+  if (!is.data.frame(validate_cascade)) {
+    stop("`validate_cascade` must be a data frame", call. = FALSE)
+  }
+  if (ncol(validate_cascade) < 2L) {
+    stop("`validate_cascade` must have at least 2 columns", call. = FALSE)
+  }
+  if (!all(names(validate_cascade) %in% names(x))) {
+    stop(
+      "All column names in `validate_cascade` must also be column names in `x`",
+      call. = FALSE
+    )
+  }
 
-    # level 1: plain list of unique first-column values
-    lvl1_vals <- unique(validate_cascade[[1L]])
+  # warn on rows with internal NAs (e.g. adm2 NA but adm3 set) -- likely a
+  # data error; such rows still contribute up to the first NA but not beyond
+  casc_cols <- names(validate_cascade)
+  na_mask <- vapply(
+    validate_cascade,
+    function(col) is.na(col),
+    logical(nrow(validate_cascade))
+  )
+  if (!is.matrix(na_mask)) {
+    na_mask <- matrix(na_mask, nrow = nrow(validate_cascade))
+  }
+  has_gap <- apply(na_mask, 1L, function(r) {
+    first_na <- which(r)[1L]
+    !is.na(first_na) && first_na < length(r) && any(!r[(first_na + 1L):length(r)])
+  })
+  if (any(has_gap)) {
+    warning(
+      "Row(s) in `validate_cascade` contain a gap (NA in an ancestor column ",
+      "followed by a non-NA in a deeper column): ",
+      paste(which(has_gap), collapse = ", "),
+      ". Levels deeper than the first NA in each such row are ignored.",
+      call. = FALSE
+    )
+  }
+
+  casc_sheet <- "valid_options_cascade"
+  if (casc_sheet %in% wb$sheet_names) {
+    casc_existing <- openxlsx::readWorkbook(wb, casc_sheet, colNames = FALSE)
+    next_col <- ncol(casc_existing) + 1L
+  } else {
+    next_col <- 1L
+    openxlsx::addWorksheet(wb, casc_sheet, visible = FALSE)
+  }
+
+  # level 1: unique non-NA values from the first column
+  lvl1_vals <- unique(validate_cascade[[1L]])
+  lvl1_vals <- lvl1_vals[!is.na(lvl1_vals)]
+
+  if (length(lvl1_vals) > 0L) {
     lvl1_col <- next_col
     openxlsx::writeData(
       wb,
@@ -763,6 +829,7 @@ qxl_ <- function(
     )
     next_col <- next_col + 1L
 
+    lvl1_letter <- int_to_excel_col(lvl1_col)
     suppressWarnings(
       openxlsx::dataValidation(
         wb,
@@ -770,14 +837,11 @@ qxl_ <- function(
         cols = which(names(x) == casc_cols[1L]),
         rows = data_start_row:nrow_x,
         type = "list",
-        value = paste0(
-          "'",
+        value = sprintf(
+          "'%s'!$%s$1:$%s$%d",
           casc_sheet,
-          "'!$",
-          COLS_EXCEL[lvl1_col],
-          "$1:$",
-          COLS_EXCEL[lvl1_col],
-          "$",
+          lvl1_letter,
+          lvl1_letter,
           length(lvl1_vals)
         ),
         allowBlank = TRUE,
@@ -785,116 +849,132 @@ qxl_ <- function(
         showErrorMsg = TRUE
       )
     )
+  }
 
-    # levels 2..n: one named range per ancestor-key, INDIRECT validation
-    for (i in seq(2L, ncol(validate_cascade))) {
-      child_col <- casc_cols[i]
+  # levels 2..n: one sorted (key, value) lookup table per level
+  for (i in seq(2L, ncol(validate_cascade))) {
+    child_col <- casc_cols[i]
+    ancestor_cols <- casc_cols[seq_len(i - 1L)]
 
-      # compound key from all ancestor columns (levels 1..i-1)
-      ancestor_keys <- apply(
-        validate_cascade[seq_len(i - 1L)],
-        1L,
-        paste,
-        collapse = "__"
-      )
-      groups <- lapply(split(validate_cascade[[child_col]], ancestor_keys), unique)
+    # rows where all ancestors and the child are non-NA
+    ancestors_df <- validate_cascade[, ancestor_cols, drop = FALSE]
+    children <- validate_cascade[[child_col]]
+    keep <- !is.na(children) &
+      Reduce(`&`, lapply(ancestors_df, function(c) !is.na(c)))
 
-      lookup_keys <- character(0L)
-      lookup_ids <- character(0L)
+    if (!any(keep)) {
+      next
+    } # no valid (ancestor, child) pairs at this level
 
-      for (key in names(groups)) {
-        child_vals <- groups[[key]]
-        range_name <- paste0("casc_", next_col)
-        openxlsx::writeData(
-          wb,
-          casc_sheet,
-          x = data.frame(v = child_vals),
-          startCol = next_col,
-          startRow = 1L,
-          colNames = FALSE
-        )
-        openxlsx::createNamedRegion(
-          wb,
-          casc_sheet,
-          cols = next_col,
-          rows = seq_along(child_vals),
-          name = range_name,
-          overwrite = TRUE
-        )
-        lookup_keys <- c(lookup_keys, key)
-        lookup_ids <- c(lookup_ids, range_name)
-        next_col <- next_col + 1L
-      }
+    ancestors_kept <- ancestors_df[keep, , drop = FALSE]
+    keys <- do.call(
+      paste,
+      c(unname(as.list(ancestors_kept)), sep = "__")
+    )
 
-      # write lookup table: keys column + ids column
-      key_col_idx <- next_col
-      id_col_idx <- next_col + 1L
-      n_groups <- length(lookup_keys)
-      openxlsx::writeData(
-        wb,
-        casc_sheet,
-        x = data.frame(v = lookup_keys),
-        startCol = key_col_idx,
-        startRow = 1L,
-        colNames = FALSE
-      )
-      openxlsx::writeData(
-        wb,
-        casc_sheet,
-        x = data.frame(v = lookup_ids),
-        startCol = id_col_idx,
-        startRow = 1L,
-        colNames = FALSE
-      )
-      next_col <- next_col + 2L
-
-      # INDIRECT formula: MATCH the ancestor key against the lookup table, then
-      # INDEX the corresponding range name and INDIRECT into it. This avoids any
-      # text transformation of cell values, so Unicode characters are handled
-      # correctly.
-      ancestor_letters <- COLS_EXCEL[which(names(x) %in% casc_cols[seq_len(i - 1L)])]
-      key_col_letter <- COLS_EXCEL[key_col_idx]
-      id_col_letter <- COLS_EXCEL[id_col_idx]
-
-      if (length(ancestor_letters) == 1L) {
-        key_expr <- sprintf("$%s%d", ancestor_letters, data_start_row)
-      } else {
-        parts <- sprintf("$%s%d", ancestor_letters, data_start_row)
-        key_expr <- paste0("CONCATENATE(", paste(parts, collapse = ',"__",'), ")")
-      }
-
-      indirect_formula <- sprintf(
-        "INDIRECT(INDEX('valid_options_cascade'!$%s$1:$%s$%d,MATCH(%s,'valid_options_cascade'!$%s$1:$%s$%d,0)))",
-        id_col_letter,
-        id_col_letter,
-        n_groups,
-        key_expr,
-        key_col_letter,
-        key_col_letter,
-        n_groups
-      )
-      suppressWarnings(
-        openxlsx::dataValidation(
-          wb,
-          sheet,
-          cols = which(names(x) == child_col),
-          rows = data_start_row:nrow_x,
-          type = "list",
-          value = indirect_formula,
-          allowBlank = TRUE,
-          showInputMsg = TRUE,
-          showErrorMsg = TRUE
-        )
+    # collision check: if "__" appears inside a value, two distinct ancestor
+    # tuples may collapse to the same compound key (e.g. ("Region__A", "X")
+    # and ("Region", "A__X") both produce "Region__A__X"), making MATCH
+    # ambiguous in Excel
+    ancestors_unique <- unique(ancestors_kept)
+    keys_unique <- do.call(
+      paste,
+      c(unname(as.list(ancestors_unique)), sep = "__")
+    )
+    if (anyDuplicated(keys_unique)) {
+      dup <- unique(keys_unique[duplicated(keys_unique)])
+      stop(
+        "Separator collision in `validate_cascade` at level '",
+        child_col,
+        "': the following compound key(s) come from more than one distinct ",
+        "ancestor combination, which happens when an ancestor value contains ",
+        "the internal separator '__' -- ",
+        paste(dQuote(dup, q = FALSE), collapse = ", "),
+        ". Rename the offending value(s) in `validate_cascade` to remove '__'.",
+        call. = FALSE
       )
     }
+
+    pairs <- unique(data.frame(
+      k = keys,
+      v = as.character(children[keep]),
+      stringsAsFactors = FALSE
+    ))
+    pairs <- pairs[order(pairs$k, pairs$v), , drop = FALSE]
+    n_rows <- nrow(pairs)
+
+    key_col_idx <- next_col
+    val_col_idx <- next_col + 1L
+
+    openxlsx::writeData(
+      wb,
+      casc_sheet,
+      x = data.frame(v = pairs$k),
+      startCol = key_col_idx,
+      startRow = 1L,
+      colNames = FALSE
+    )
+    openxlsx::writeData(
+      wb,
+      casc_sheet,
+      x = data.frame(v = pairs$v),
+      startCol = val_col_idx,
+      startRow = 1L,
+      colNames = FALSE
+    )
+    next_col <- next_col + 2L
+
+    key_col_letter <- int_to_excel_col(key_col_idx)
+    val_col_letter <- int_to_excel_col(val_col_idx)
+
+    # ancestor column letters in x, in cascade order
+    ancestor_letters <- vapply(
+      ancestor_cols,
+      function(a) int_to_excel_col(match(a, names(x))),
+      character(1L)
+    )
+
+    if (length(ancestor_letters) == 1L) {
+      key_expr <- sprintf("$%s%d", ancestor_letters, data_start_row)
+    } else {
+      parts <- sprintf("$%s%d", ancestor_letters, data_start_row)
+      key_expr <- paste0("CONCATENATE(", paste(parts, collapse = ',"__",'), ")")
+    }
+
+    range_keys <- sprintf(
+      "'%s'!$%s$1:$%s$%d",
+      casc_sheet,
+      key_col_letter,
+      key_col_letter,
+      n_rows
+    )
+    val_anchor <- sprintf("'%s'!$%s$1", casc_sheet, val_col_letter)
+
+    offset_formula <- sprintf(
+      "OFFSET(%s,MATCH(%s,%s,0)-1,0,COUNTIF(%s,%s),1)",
+      val_anchor,
+      key_expr,
+      range_keys,
+      range_keys,
+      key_expr
+    )
+
+    suppressWarnings(
+      openxlsx::dataValidation(
+        wb,
+        sheet,
+        cols = which(names(x) == child_col),
+        rows = data_start_row:nrow_x,
+        type = "list",
+        value = offset_formula,
+        allowBlank = TRUE,
+        showInputMsg = TRUE,
+        showErrorMsg = TRUE
+      )
+    )
   }
 
-  ### return -------------------------------------------------------------------
-  if (!is.null(file)) {
-    qwrite(wb, file = file, overwrite = overwrite)
-  } else {
-    return(wb)
-  }
+  wb
 }
 
 

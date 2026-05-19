@@ -1,5 +1,15 @@
 context("validate_cascade")
 
+
+# helper: read a single column block from the hidden cascade sheet
+read_casc_col <- function(wb, col_letter, n) {
+  sheet_idx <- which(wb$sheet_names == "valid_options_cascade")
+  df <- openxlsx::readWorkbook(wb, sheet_idx, colNames = FALSE)
+  col_idx <- match(col_letter, qxl:::int_to_excel_col(seq_len(ncol(df))))
+  as.character(df[seq_len(n), col_idx])
+}
+
+
 test_that("validate_cascade works as expected", {
   cascade <- data.frame(
     adm1 = c(
@@ -50,53 +60,71 @@ test_that("validate_cascade works as expected", {
 
   wb <- qxl(df, validate_cascade = cascade)
 
-  # hidden sheet created
+  # hidden sheet created, no named regions used
   expect_true("valid_options_cascade" %in% wb$sheet_names)
+  expect_length(openxlsx::getNamedRegions(wb), 0L)
 
-  named_regions <- openxlsx::getNamedRegions(wb)
-
-  # level 2 named ranges: opaque casc_N ids (split() sorts alphabetically:
-  # Ontario=col2, Quebec=col3)
-  expect_true(all(c("casc_2", "casc_3") %in% named_regions))
-
-  # level 3 named ranges: lookup table occupies cols 4-5, so lvl3 groups start
-  # at col 6 (split() order: Ontario__Ottawa, Ontario__Toronto,
-  # Quebec__Montreal, Quebec__Quebec City)
-  expect_true(all(c("casc_6", "casc_7", "casc_8", "casc_9") %in% named_regions))
-
-  # no human-readable or sanitized names should appear
-  expect_false(any(
-    c("Ontario", "Quebec", "Ontario__Toronto", "Ontario__Ottawa", "Quebec__Quebec_City", "Quebec__Montreal") %in%
-      named_regions
-  ))
-
-  # three data validations written to the main sheet (one per cascade column)
+  # data validations: one per cascade column
   sheet_idx <- which(wb$sheet_names == "Sheet1")
   dvs <- wb$worksheets[[sheet_idx]]$dataValidationsLst
   expect_length(dvs, 3L)
 
-  # level 1 uses a direct range reference, not INDIRECT
+  # level 1: direct range reference, no OFFSET/INDIRECT
   expect_true(grepl("valid_options_cascade", dvs[[1]]))
+  expect_false(grepl("OFFSET", dvs[[1]]))
   expect_false(grepl("INDIRECT", dvs[[1]]))
 
-  # levels 2 and 3 use INDIRECT with MATCH+INDEX lookup (not SUBSTITUTE)
-  expect_true(grepl("INDIRECT.*INDEX.*MATCH", dvs[[2]]))
-  expect_true(grepl("INDIRECT.*INDEX.*MATCH", dvs[[3]]))
-  expect_false(grepl("SUBSTITUTE", dvs[[2]]))
-  expect_false(grepl("SUBSTITUTE", dvs[[3]]))
+  # levels 2 and 3: OFFSET + MATCH + COUNTIF
+  expect_true(grepl("OFFSET.*MATCH.*COUNTIF", dvs[[2]]))
+  expect_true(grepl("OFFSET.*MATCH.*COUNTIF", dvs[[3]]))
 
-  # level 2 formula references only adm1 (col A)
-  expect_true(grepl("\\$A", dvs[[2]]))
-  expect_false(grepl("\\$B", dvs[[2]]))
+  # level 2 key_expr references only adm1 (col A); level 3 concatenates A and B
+  expect_false(grepl("CONCATENATE", dvs[[2]]))
+  expect_true(grepl("MATCH\\(\\$A\\d", dvs[[2]]))
+  expect_true(grepl("CONCATENATE\\(\\$A\\d+,\"__\",\\$B\\d", dvs[[3]]))
 
-  # level 3 formula references both adm1 (col A) and adm2 (col B)
-  expect_true(grepl("\\$A", dvs[[3]]))
-  expect_true(grepl("\\$B", dvs[[3]]))
+  # level 1 lookup: alphabetical "Ontario", "Quebec"
+  expect_equal(read_casc_col(wb, "A", 2L), c("Ontario", "Quebec"))
+
+  # level 2 lookup keys + values, sorted by key
+  expect_equal(
+    read_casc_col(wb, "B", 4L),
+    c("Ontario", "Ontario", "Quebec", "Quebec")
+  )
+  expect_equal(
+    read_casc_col(wb, "C", 4L),
+    c("Ottawa", "Toronto", "Montreal", "Quebec City")
+  )
+
+  # level 3 lookup: 10 unique (compound-key, value) pairs, sorted by (key, value)
+  expect_equal(
+    read_casc_col(wb, "D", 10L),
+    c(
+      rep("Ontario__Ottawa", 2L),
+      rep("Ontario__Toronto", 3L),
+      rep("Quebec__Montreal", 3L),
+      rep("Quebec__Quebec City", 2L)
+    )
+  )
+  expect_equal(
+    read_casc_col(wb, "E", 10L),
+    c(
+      "Ottawa 1",
+      "Ottawa 2",
+      "Toronto 1",
+      "Toronto 2",
+      "Toronto 3",
+      "Montreal 1",
+      "Montreal 2",
+      "Montreal 3",
+      "Quebec City 1",
+      "Quebec City 2"
+    )
+  )
 })
 
 
 test_that("validate_cascade handles duplicate child values across parents", {
-  # "Orange County" appears under three different states
   cascade <- data.frame(
     state = c("New York", "New York", "California", "California", "Florida"),
     county = c("Orange County", "Albany County", "Orange County", "LA County", "Orange County"),
@@ -113,71 +141,152 @@ test_that("validate_cascade handles duplicate child values across parents", {
 
   wb <- qxl(df, validate_cascade = cascade)
 
-  named_regions <- openxlsx::getNamedRegions(wb)
+  # no named regions — pure formula-based lookup
+  expect_length(openxlsx::getNamedRegions(wb), 0L)
 
-  # each state gets its own named range at level 2 (split() alphabetical order:
-  # California=col2, Florida=col3, New York=col4; lookup at cols 5-6)
-  expect_true(all(c("casc_2", "casc_3", "casc_4") %in% named_regions))
+  # the compound-key column at level 3 has one entry per (state, county) pair
+  # in sorted order, so "Orange County" appears three times under different
+  # state prefixes and resolves to a different city each time
+  casc_idx <- which(wb$sheet_names == "valid_options_cascade")
+  casc <- openxlsx::readWorkbook(wb, casc_idx, colNames = FALSE)
 
-  # each state+county combo gets its own named range at level 3 (split()
-  # alphabetical order: California__LA County=col7, California__Orange
-  # County=col8, Florida__Orange County=col9, New York__Albany County=col10,
-  # New York__Orange County=col11)
-  expect_true(all(
-    c("casc_7", "casc_8", "casc_9", "casc_10", "casc_11") %in% named_regions
-  ))
+  # find the level-3 key column: it's the second 2-col block after level 1.
+  # level 1 = col 1, level 2 keys/vals = cols 2-3, level 3 keys/vals = cols 4-5
+  keys3 <- as.character(casc[!is.na(casc[[4]]), 4])
+  vals3 <- as.character(casc[!is.na(casc[[5]]), 5])
+  lookup <- setNames(vals3, keys3)
 
-  # no human-readable or sanitized names
-  expect_false(any(
-    c("Orange_County", "New_York", "California", "Florida") %in% named_regions
-  ))
+  expect_equal(lookup[["California__Orange County"]], "Anaheim")
+  expect_equal(lookup[["Florida__Orange County"]], "Orlando")
+  expect_equal(lookup[["New York__Orange County"]], "Newburgh")
+})
 
-  # each Orange County range contains only the cities for that state
-  nr_df <- data.frame(
-    name = named_regions,
-    sheet = attr(named_regions, "sheet"),
-    pos = attr(named_regions, "position"),
+
+test_that("validate_cascade supports long-format input with trailing NAs", {
+  # Long format: some adm3 levels exist with no adm4 children; some adm2 with
+  # no adm3 children. A row contributes a value at level i only when cols 1..i
+  # are all non-NA.
+  cascade <- data.frame(
+    adm1 = c("ON", "ON", "ON", "ON", "QC", "QC", "QC"),
+    adm2 = c(NA, "Toronto", "Toronto", "Ottawa", NA, "Montreal", "Montreal"),
+    adm3 = c(NA, NA, "NorthYork", NA, NA, NA, "Plateau"),
+    adm4 = c(NA, NA, NA, NA, NA, NA, NA),
     stringsAsFactors = FALSE
   )
 
-  casc_sheet_idx <- which(wb$sheet_names == "valid_options_cascade")
+  df <- data.frame(
+    adm1 = c("ON", "QC"),
+    adm2 = NA_character_,
+    adm3 = NA_character_,
+    adm4 = NA_character_,
+    stringsAsFactors = FALSE
+  )
 
-  read_range <- function(wb, sheet_idx, position) {
-    rc <- strsplit(position, ":")[[1]]
-    cols <- match(gsub("[0-9]", "", rc), LETTERS)
-    rows <- as.integer(gsub("[A-Z]", "", rc))
-    as.character(openxlsx::readWorkbook(wb, sheet_idx, colNames = FALSE)[
-      rows[1]:rows[2],
-      cols[1]
-    ])
-  }
+  wb <- qxl(df, validate_cascade = cascade)
 
-  ca_oc <- nr_df$pos[nr_df$name == "casc_8"] # California__Orange County
-  fl_oc <- nr_df$pos[nr_df$name == "casc_9"] # Florida__Orange County
-  ny_oc <- nr_df$pos[nr_df$name == "casc_11"] # New York__Orange County
+  # level 1: both adm1 values still appear (the bare "ON" / "QC" rows contribute)
+  expect_equal(read_casc_col(wb, "A", 2L), c("ON", "QC"))
 
-  expect_equal(read_range(wb, casc_sheet_idx, ny_oc), "Newburgh")
-  expect_equal(read_range(wb, casc_sheet_idx, ca_oc), "Anaheim")
-  expect_equal(read_range(wb, casc_sheet_idx, fl_oc), "Orlando")
+  # level 2: only rows with non-NA adm2 contribute. ON has Ottawa + Toronto,
+  # QC has Montreal. Bare "ON" / "QC" rows are skipped.
+  expect_equal(
+    read_casc_col(wb, "B", 3L),
+    c("ON", "ON", "QC")
+  )
+  expect_equal(
+    read_casc_col(wb, "C", 3L),
+    c("Ottawa", "Toronto", "Montreal")
+  )
+
+  # level 3: only rows with non-NA adm3 contribute
+  expect_equal(
+    read_casc_col(wb, "D", 2L),
+    c("ON__Toronto", "QC__Montreal")
+  )
+  expect_equal(read_casc_col(wb, "E", 2L), c("NorthYork", "Plateau"))
+
+  # level 4: no rows have non-NA adm4, so no validation for adm4
+  sheet_idx <- which(wb$sheet_names == "Sheet1")
+  dvs <- wb$worksheets[[sheet_idx]]$dataValidationsLst
+  expect_length(dvs, 3L) # adm1, adm2, adm3 only
+})
+
+
+test_that("validate_cascade warns on gap rows (NA followed by non-NA)", {
+  # gap: adm2 NA but adm3 set — likely a data error
+  cascade <- data.frame(
+    adm1 = c("ON", "ON"),
+    adm2 = c("Toronto", NA),
+    adm3 = c("NorthYork", "Phantom"),
+    stringsAsFactors = FALSE
+  )
+
+  df <- data.frame(
+    adm1 = "ON",
+    adm2 = NA_character_,
+    adm3 = NA_character_,
+    stringsAsFactors = FALSE
+  )
+
+  expect_warning(
+    qxl(df, validate_cascade = cascade),
+    "gap"
+  )
+})
+
+
+test_that("validate_cascade detects separator collisions", {
+  # collision: ("Region__A", "X") and ("Region", "A__X") both produce
+  # compound key "Region__A__X" — MATCH would be ambiguous in Excel
+  cascade_collide <- data.frame(
+    adm1 = c("Region__A", "Region"),
+    adm2 = c("X", "A__X"),
+    adm3 = c("child1", "child2"),
+    stringsAsFactors = FALSE
+  )
+
+  df <- data.frame(
+    adm1 = c("Region__A", "Region"),
+    adm2 = NA_character_,
+    adm3 = NA_character_,
+    stringsAsFactors = FALSE
+  )
+
+  expect_error(
+    qxl(df, validate_cascade = cascade_collide),
+    "Separator collision.*Region__A__X"
+  )
+
+  # but a single "__" inside a value, with no collision, is fine
+  cascade_safe <- data.frame(
+    adm1 = c("Region__A", "Region__B"),
+    adm2 = c("X", "Y"),
+    adm3 = c("child1", "child2"),
+    stringsAsFactors = FALSE
+  )
+  df_safe <- data.frame(
+    adm1 = c("Region__A", "Region__B"),
+    adm2 = NA_character_,
+    adm3 = NA_character_,
+    stringsAsFactors = FALSE
+  )
+  expect_error(qxl(df_safe, validate_cascade = cascade_safe), NA)
 })
 
 
 test_that("validate_cascade input validation catches bad args", {
   df <- data.frame(adm1 = "Ontario", adm2 = NA_character_, stringsAsFactors = FALSE)
 
-  # not a data frame
   expect_error(
     qxl(df, validate_cascade = list(adm1 = "Ontario", adm2 = "Toronto")),
     "`validate_cascade` must be a data frame"
   )
 
-  # fewer than 2 columns
   expect_error(
     qxl(df, validate_cascade = data.frame(adm1 = "Ontario")),
     "at least 2 columns"
   )
 
-  # column names not in x
   expect_error(
     qxl(df, validate_cascade = data.frame(foo = "a", bar = "b")),
     "column names in `validate_cascade` must also be column names in `x`"
@@ -186,14 +295,12 @@ test_that("validate_cascade input validation catches bad args", {
 
 
 test_that("validate_cascade works correctly with non-ASCII (Arabic) values", {
-  # values that differ only in Arabic characters must not collide, and the
-  # dropdowns must resolve correctly despite the non-ASCII text
   cascade <- data.frame(
     country = c("Egypt", "Egypt", "Egypt"),
     city = c(
-      "Cairo \u0627\u0644\u0642\u0627\u0647\u0631\u0629",
-      "Alexandria \u0627\u0644\u0625\u0633\u0643\u0646\u062f\u0631\u064a\u0629",
-      "Giza \u0627\u0644\u062c\u064a\u0632\u0629"
+      "Cairo القاهرة",
+      "Alexandria الإسكندرية",
+      "Giza الجيزة"
     ),
     district = c("district1", "district2", "district3"),
     stringsAsFactors = FALSE
@@ -208,49 +315,69 @@ test_that("validate_cascade works correctly with non-ASCII (Arabic) values", {
 
   wb <- qxl(df, validate_cascade = cascade)
 
-  named_regions <- openxlsx::getNamedRegions(wb)
+  # level 3 lookup keys preserve the Arabic city names verbatim in the compound key
+  casc_idx <- which(wb$sheet_names == "valid_options_cascade")
+  casc <- openxlsx::readWorkbook(wb, casc_idx, colNames = FALSE)
+  keys3 <- as.character(casc[!is.na(casc[[4]]), 4])
+  vals3 <- as.character(casc[!is.na(casc[[5]]), 5])
 
-  # level 2: one group (all cities under Egypt) at col 2; lookup at cols 3-4
-  expect_true("casc_2" %in% named_regions)
+  expect_length(keys3, 3L)
+  expect_true(all(grepl("^Egypt__", keys3)))
+  expect_equal(sort(vals3), c("district1", "district2", "district3"))
 
-  # level 3: three distinct groups at cols 5-7 (split() alphabetical order:
-  # Egypt__Alexandria..., Egypt__Cairo..., Egypt__Giza...)
-  expect_true(all(c("casc_5", "casc_6", "casc_7") %in% named_regions))
-
-  # exactly 4 casc_N ranges total (1 lvl2 + 3 lvl3), no spurious extras from
-  # collision/stripping
-  casc_names <- grep("^casc_", named_regions, value = TRUE)
-  expect_length(casc_names, 4L)
-
-  # formula uses MATCH+INDEX, not SUBSTITUTE
+  # formula uses OFFSET+MATCH+COUNTIF
   sheet_idx <- which(wb$sheet_names == "Sheet1")
   dvs <- wb$worksheets[[sheet_idx]]$dataValidationsLst
-  expect_false(grepl("SUBSTITUTE", dvs[[3]]))
-  expect_true(grepl("INDIRECT.*INDEX.*MATCH", dvs[[3]]))
+  expect_true(grepl("OFFSET.*MATCH.*COUNTIF", dvs[[3]]))
 })
 
 
-if (FALSE) {
-  # test performance with larger dataset
-  geo_nga <- obtdata::fetch_georef("HTI")$ref
+test_that("validate_cascade handles deep cascades without column-letter overflow", {
+  # Reproducer for the original bug: the old design wrote one column per
+  # ancestor-key group on the hidden sheet, so a 4-level cascade with hundreds
+  # of level-4 groups overflowed COLS_EXCEL (capped at ZZ) and produced invalid
+  # references. The new design uses only 2 columns per level, so this asserts
+  # that property plus formula integrity on a moderately deep cascade.
+  cascade <- expand.grid(
+    adm1 = paste0("A", 1:3),
+    adm2 = paste0("B", 1:4),
+    adm3 = paste0("C", 1:5),
+    adm4 = paste0("D", 1:6),
+    KEEP.OUT.ATTRS = FALSE,
+    stringsAsFactors = FALSE
+  )
+  # 3*4*5*6 = 360 rows; 3 adm1, 12 adm1__adm2, 60 adm1__adm2__adm3 groups
 
-  cascade <- geo_nga |>
-    dplyr::filter(level == 4) |>
-    distinct(adm1_name, adm2_name, adm3_name, adm4_name) |>
-    arrange(adm1_name, adm2_name, adm3_name, adm4_name)
-
-  df <- data.frame(
-    id = 1:10,
-    adm1_name = c("Sud", rep(NA, 9)),
-    adm2_name = NA_character_,
-    adm3_name = NA_character_,
-    adm4_name = NA_character_,
+  dat <- data.frame(
+    id = 1:3,
+    adm1 = NA_character_,
+    adm2 = NA_character_,
+    adm3 = NA_character_,
+    adm4 = NA_character_,
     stringsAsFactors = FALSE
   )
 
-  qxl::qxl(
-    df,
-    "~/desktop/test_cascade.xlsx",
-    validate_cascade = cascade
-  )
-}
+  wb <- qxl(dat, validate_cascade = cascade)
+
+  sheet_idx <- which(wb$sheet_names == "Sheet1")
+  dvs <- wb$worksheets[[sheet_idx]]$dataValidationsLst
+  expect_length(dvs, 4L)
+
+  # every data-validation formula resolves to valid Excel references (no "NA"s)
+  for (dv in dvs) {
+    expect_false(grepl(">NA<|\\$NA\\$", dv))
+  }
+
+  # hidden sheet uses just 1 + 2*(n-1) = 7 columns regardless of group counts
+  casc_idx <- which(wb$sheet_names == "valid_options_cascade")
+  casc <- openxlsx::readWorkbook(wb, casc_idx, colNames = FALSE)
+  expect_equal(ncol(casc), 7L)
+  expect_length(openxlsx::getNamedRegions(wb), 0L)
+
+  # spot-check lookup-table sizes: level 3 keys = 12 distinct (adm1, adm2)
+  # pairs each repeated 5 times for the 5 adm3 values = 60 rows
+  expect_equal(sum(!is.na(casc[[4]])), 60L)
+  # level 4 keys = 60 distinct (adm1, adm2, adm3) triples each repeated 6
+  # times for the 6 adm4 values = 360 rows
+  expect_equal(sum(!is.na(casc[[6]])), 360L)
+})

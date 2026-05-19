@@ -1,5 +1,3 @@
-
-
 # Excel columns
 COLS_EXCEL <- c(
   LETTERS,
@@ -9,6 +7,32 @@ COLS_EXCEL <- c(
     function(x) paste0(x[2], x[1])
   )
 )
+
+
+#' Convert 1-indexed column number(s) to Excel column letter(s)
+#'
+#' Handles any positive integer (A, Z, AA, ZZ, AAA, ..., XFD), unlike
+#' `COLS_EXCEL` which is capped at ZZ.
+#'
+#' @noRd
+int_to_excel_col <- function(n) {
+  vapply(
+    n,
+    function(x) {
+      if (is.na(x) || x < 1L) {
+        return(NA_character_)
+      }
+      out <- ""
+      while (x > 0L) {
+        r <- (x - 1L) %% 26L
+        out <- paste0(LETTERS[r + 1L], out)
+        x <- (x - 1L) %/% 26L
+      }
+      out
+    },
+    character(1L)
+  )
+}
 
 # R operators and Excel functions equivalents
 ROP2EXCEL <- c(
@@ -36,7 +60,9 @@ RFN2EXCEL <- c(
 #' @importFrom rlang is_quosure
 is_quo <- function(x) {
   out <- try(rlang::is_quosure(x), silent = TRUE)
-  if ("try-error" %in% class(out)) out <- FALSE
+  if ("try-error" %in% class(out)) {
+    out <- FALSE
+  }
   out
 }
 
@@ -45,7 +71,9 @@ is_quo <- function(x) {
 #' @importFrom rlang eval_tidy
 is_quo_numeric <- function(x) {
   out <- try(all(is.numeric(rlang::eval_tidy(x))), silent = TRUE)
-  if ("try-error" %in% class(out)) out <- FALSE
+  if ("try-error" %in% class(out)) {
+    out <- FALSE
+  }
   out
 }
 
@@ -54,7 +82,9 @@ is_quo_numeric <- function(x) {
 #' @importFrom rlang eval_tidy
 is_quo_character <- function(x) {
   out <- try(all(is.character(rlang::eval_tidy(x))), silent = TRUE)
-  if ("try-error" %in% class(out)) out <- FALSE
+  if ("try-error" %in% class(out)) {
+    out <- FALSE
+  }
   out
 }
 
@@ -63,7 +93,9 @@ is_quo_character <- function(x) {
 #' @importFrom rlang is_quosure quo_get_expr
 quo_to_lang <- function(x) {
   is_quo <- try(rlang::is_quosure(x), silent = TRUE)
-  if ("try-error" %in% class(is_quo)) is_quo <- FALSE
+  if ("try-error" %in% class(is_quo)) {
+    is_quo <- FALSE
+  }
   if (is_quo) {
     x <- rlang::quo_get_expr(x)
   }
@@ -77,7 +109,6 @@ quo_to_lang <- function(x) {
 #' @importFrom rlang `!!`
 #' @importFrom dplyr select
 col_selection <- function(data, cols, index = TRUE, invert = FALSE) {
-
   x <- names(dplyr::select(data, !!cols))
 
   if (invert) {
@@ -110,11 +141,9 @@ paste_collapse_c <- function(x, quote = TRUE, collapse = ", ") {
 
 #' @noRd
 cols_to_chr <- function(x) {
-
   for (j in seq_len(ncol(x))) {
     x[[j]] <- as.character(x[[j]])
   }
 
   x
 }
-

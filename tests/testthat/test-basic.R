@@ -1,7 +1,6 @@
 context("basic")
 
 test_that("basic functionality works as expected", {
-
   library(datasets)
   file_write <- tempfile(fileext = ".xlsx")
 
@@ -18,8 +17,8 @@ test_that("basic functionality works as expected", {
 
   # test multiple sheets
   x <- qxl(mtcars_tbl, sheet = "Sheet1")
-  x <- qxl(mtcars_tbl[1:4,], wb = x, sheet = "BBB")
-  x <- qxl(mtcars_tbl[1:5,], wb = x, sheet = "CCC")
+  x <- qxl(mtcars_tbl[1:4, ], wb = x, sheet = "BBB")
+  x <- qxl(mtcars_tbl[1:5, ], wb = x, sheet = "CCC")
   expect_equal(x$sheet_names, c("Sheet1", "BBB", "CCC"))
 
   # test argument header
@@ -54,10 +53,10 @@ test_that("basic functionality works as expected", {
   wb <- qxl(
     mtcars_tbl,
     style = list(
-      qstyle(mpg > 20,   cols = mpg,  bgFill = "#fddbc7"),
+      qstyle(mpg > 20, cols = mpg, bgFill = "#fddbc7"),
       qstyle(disp > 300, cols = disp, bgFill = "#fddbc7"),
       qstyle(drat > 3.2, cols = drat, bgFill = "#fddbc7"),
-      qstyle(wt > 3,     cols = wt,   bgFill = "#fddbc7")
+      qstyle(wt > 3, cols = wt, bgFill = "#fddbc7")
     )
   )
 
@@ -124,12 +123,24 @@ test_that("basic functionality works as expected", {
 
   dict_expect <- data.frame(
     adm2 = c(
-      "AB", "AB", "AB", "AB",
-      "SK", "SK", "SK", "SK"
+      "AB",
+      "AB",
+      "AB",
+      "AB",
+      "SK",
+      "SK",
+      "SK",
+      "SK"
     ),
     adm3 = c(
-      "Calgary", "Edmonton", "<Missing>", "<Unknown>",
-      "Regina", "Saskatoon", "<Missing>", "<Unknown>"
+      "Calgary",
+      "Edmonton",
+      "<Missing>",
+      "<Unknown>",
+      "Regina",
+      "Saskatoon",
+      "<Missing>",
+      "<Unknown>"
     )
   )
 
@@ -208,6 +219,4 @@ test_that("basic functionality works as expected", {
 
   x <- qread(file_write)
   expect_equal(names(x), names(df))
-
 })
-
