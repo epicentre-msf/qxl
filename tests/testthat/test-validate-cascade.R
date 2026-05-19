@@ -332,6 +332,66 @@ test_that("validate_cascade works correctly with non-ASCII (Arabic) values", {
 })
 
 
+test_that("validate_extra_rows extends cascade validation to extra rows", {
+  cascade <- data.frame(
+    adm1 = c("ON", "ON", "QC"),
+    adm2 = c("Toronto", "Ottawa", "Montreal"),
+    stringsAsFactors = FALSE
+  )
+  df <- data.frame(
+    adm1 = c("ON", "QC"),
+    adm2 = NA_character_,
+    stringsAsFactors = FALSE
+  )
+
+  # helper: extract the last row in a data validation's sqref attribute
+  dv_end_row <- function(dv) {
+    m <- regmatches(dv, regexpr("[A-Z]+\\d+:[A-Z]+(\\d+)", dv))
+    as.integer(sub(".*:[A-Z]+", "", m))
+  }
+
+  sheet_idx <- function(wb) which(wb$sheet_names == "Sheet1")
+
+  # default: 1000 extra rows past data (data ends at row 3 -> validation ends at 1003)
+  wb_def <- qxl(df, validate_cascade = cascade)
+  dvs <- wb_def$worksheets[[sheet_idx(wb_def)]]$dataValidationsLst
+  expect_equal(dv_end_row(dvs[[1]]), 3L + 1000L)
+  expect_equal(dv_end_row(dvs[[2]]), 3L + 1000L)
+
+  # 0 extra rows: matches old behavior (data range only)
+  wb_zero <- qxl(df, validate_cascade = cascade, validate_extra_rows = 0L)
+  dvs <- wb_zero$worksheets[[sheet_idx(wb_zero)]]$dataValidationsLst
+  expect_equal(dv_end_row(dvs[[1]]), 3L) # data ends at row 3
+  expect_equal(dv_end_row(dvs[[2]]), 3L)
+
+  # Inf: extends to Excel's row limit (1,048,576)
+  wb_inf <- qxl(df, validate_cascade = cascade, validate_extra_rows = Inf)
+  dvs <- wb_inf$worksheets[[sheet_idx(wb_inf)]]$dataValidationsLst
+  expect_equal(dv_end_row(dvs[[1]]), 1048576L)
+  expect_equal(dv_end_row(dvs[[2]]), 1048576L)
+
+  # explicit small value
+  wb_50 <- qxl(df, validate_cascade = cascade, validate_extra_rows = 50L)
+  dvs <- wb_50$worksheets[[sheet_idx(wb_50)]]$dataValidationsLst
+  expect_equal(dv_end_row(dvs[[1]]), 3L + 50L)
+  expect_equal(dv_end_row(dvs[[2]]), 3L + 50L)
+})
+
+
+test_that("validate_extra_rows extends simple validate dropdowns too", {
+  df <- data.frame(
+    x = c("a", "b"),
+    stringsAsFactors = FALSE
+  )
+
+  wb <- qxl(df, validate = list(x = c("a", "b", "c")))
+  dvs <- wb$worksheets[[which(wb$sheet_names == "Sheet1")]]$dataValidationsLst
+  m <- regmatches(dvs[[1]], regexpr("[A-Z]+\\d+:[A-Z]+\\d+", dvs[[1]]))
+  # data ends at row 3 (header row + 2 data rows); +1000 padding -> 1003
+  expect_equal(sub(".*:[A-Z]+", "", m), as.character(3L + 1000L))
+})
+
+
 test_that("validate_cascade handles deep cascades without column-letter overflow", {
   # Reproducer for the original bug: the old design wrote one column per
   # ancestor-key group on the hidden sheet, so a 4-level cascade with hundreds

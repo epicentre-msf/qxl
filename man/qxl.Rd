@@ -35,6 +35,7 @@ qxl(
   validate_cond = NULL,
   validate_cond_all = NULL,
   validate_cascade = NULL,
+  validate_extra_rows = 1000L,
   filter = FALSE,
   filter_cols = everything(),
   zoom = 120L,
@@ -179,6 +180,14 @@ level. For example:
 
 Selecting "Ontario" in \code{adm1} will restrict the \code{adm2} dropdown to
 "Toronto" and "Ottawa".}
+
+\item{validate_extra_rows}{Integer giving the number of extra (initially
+empty) rows beyond the data range to which \code{validate} and
+\code{validate_cascade} dropdowns should also be attached, so users can append
+new rows that still benefit from validation. Defaults to \code{1000L}. Pass
+\code{0L} to restrict validation to written rows only, or \code{Inf} to extend to
+Excel's row limit. Does not apply to \code{validate_cond} (per-row validation
+keyed to specific ancestor values).}
 
 \item{filter}{Logical indicating whether to add column filters.}
 

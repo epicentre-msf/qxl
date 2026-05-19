@@ -122,6 +122,13 @@
 #'   ```
 #'   Selecting "Ontario" in `adm1` will restrict the `adm2` dropdown to
 #'   "Toronto" and "Ottawa".
+#' @param validate_extra_rows Integer giving the number of extra (initially
+#'   empty) rows beyond the data range to which `validate` and
+#'   `validate_cascade` dropdowns should also be attached, so users can append
+#'   new rows that still benefit from validation. Defaults to `1000L`. Pass
+#'   `0L` to restrict validation to written rows only, or `Inf` to extend to
+#'   Excel's row limit. Does not apply to `validate_cond` (per-row validation
+#'   keyed to specific ancestor values).
 #' @param filter Logical indicating whether to add column filters.
 #' @param filter_cols Tidy-selection specifying which columns to filter. Only
 #'   used if `filter` is `TRUE`. Defaults to `everything()` to select all
@@ -187,6 +194,7 @@ qxl <- function(
   validate_cond = NULL,
   validate_cond_all = NULL,
   validate_cascade = NULL,
+  validate_extra_rows = 1000L,
   filter = FALSE,
   filter_cols = everything(),
   zoom = 120L,
@@ -278,6 +286,7 @@ qxl <- function(
     validate_cond = validate_cond,
     validate_cond_all = validate_cond_all,
     validate_cascade = validate_cascade,
+    validate_extra_rows = validate_extra_rows,
     filter = filter,
     filter_cols = filter_cols,
     zoom = zoom,
@@ -354,6 +363,7 @@ qxl_ <- function(
   validate_cond = NULL,
   validate_cond_all = NULL,
   validate_cascade = NULL,
+  validate_extra_rows = 1000L,
   filter = FALSE,
   filter_cols = everything(),
   zoom = 120L,
@@ -428,6 +438,15 @@ qxl_ <- function(
 
   nrow_x <- nrow(x) + data_start_row - 1L # number of rows in Excel, incl. header
   ncol_x <- ncol(x)
+
+  # row to which `validate` and `validate_cascade` dropdowns extend; capped
+  # at Excel's max row (1,048,576) to handle Inf
+  validate_end_row <- as.integer(
+    min(
+      as.numeric(nrow_x) + as.numeric(validate_extra_rows),
+      1048576
+    )
+  )
 
   ### row height and col widths ------------------------------------------------
   if (!is.null(row_heights)) {
@@ -620,7 +639,7 @@ qxl_ <- function(
           wb,
           sheet,
           cols = which(names(x) %in% j),
-          rows = data_start_row:nrow_x,
+          rows = data_start_row:validate_end_row,
           type = "list",
           value = excel_range,
           allowBlank = TRUE,
@@ -731,7 +750,7 @@ qxl_ <- function(
       x = x,
       validate_cascade = validate_cascade,
       data_start_row = data_start_row,
-      nrow_x = nrow_x
+      validate_end_row = validate_end_row
     )
   }
 
@@ -764,7 +783,7 @@ write_cascade_validation <- function(
   x,
   validate_cascade,
   data_start_row,
-  nrow_x
+  validate_end_row
 ) {
   if (!is.data.frame(validate_cascade)) {
     stop("`validate_cascade` must be a data frame", call. = FALSE)
@@ -835,7 +854,7 @@ write_cascade_validation <- function(
         wb,
         sheet,
         cols = which(names(x) == casc_cols[1L]),
-        rows = data_start_row:nrow_x,
+        rows = data_start_row:validate_end_row,
         type = "list",
         value = sprintf(
           "'%s'!$%s$1:$%s$%d",
@@ -964,7 +983,7 @@ write_cascade_validation <- function(
         wb,
         sheet,
         cols = which(names(x) == child_col),
-        rows = data_start_row:nrow_x,
+        rows = data_start_row:validate_end_row,
         type = "list",
         value = offset_formula,
         allowBlank = TRUE,
