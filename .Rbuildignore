@@ -3,6 +3,7 @@
 ^archive$
 ^data-raw$
 ^draft$
+^NEWS\.md$
 ^README\.Rmd$
 ^LICENSE\.md$
 ^\.github$

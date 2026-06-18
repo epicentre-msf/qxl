@@ -1,6 +1,6 @@
 Package: qxl
 Title: Quick Customized Excel Files
-Version: 0.0.0.9000
+Version: 0.1.0
 Authors@R: c(
     person(
       "Patrick", "Barks",
@@ -14,7 +14,7 @@ License: MIT + file LICENSE
 Encoding: UTF-8
 LazyData: true
 Roxygen: list(markdown = TRUE)
-RoxygenNote: 7.3.2
+RoxygenNote: 7.3.3
 Depends: 
     R (>= 2.10)
 Imports:
