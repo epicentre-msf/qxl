@@ -7,7 +7,7 @@
 
 [![Lifecycle:
 experimental](https://img.shields.io/badge/lifecycle-experimental-orange.svg)](https://www.tidyverse.org/lifecycle/#experimental)
-[![R-CMD-check](https://github.com/epicentre-msf/qxl/workflows/R-CMD-check/badge.svg)](https://github.com/epicentre-msf/qxl/actions)
+[![R-CMD-check](https://github.com/epicentre-msf/qxl/actions/workflows/check-release.yaml/badge.svg)](https://github.com/epicentre-msf/qxl/actions/workflows/check-release.yaml)
 [![Codecov test
 coverage](https://codecov.io/gh/epicentre-msf/qxl/branch/main/graph/badge.svg)](https://codecov.io/gh/epicentre-msf/qxl?branch=main)
 <!-- badges: end -->
